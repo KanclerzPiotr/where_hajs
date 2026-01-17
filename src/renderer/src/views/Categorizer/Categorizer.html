@@ -1,0 +1,731 @@
+<div class="w-full min-h-screen p-6 flex flex-col">
+  <div class="mb-6 flex-shrink-0">
+    <h1 class="text-4xl font-bold mb-2">Kategoryzacja transakcji</h1>
+    <p class="text-lg opacity-70">Plik: {{ fileName }}</p>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl w-full flex flex-col" style="max-height: 60vh">
+    <div class="card-body w-full flex flex-col p-6" style="max-height: 60vh; min-height: 0">
+      <div class="flex items-center justify-between mb-4 flex-shrink-0">
+        <h2 class="card-title">Transakcje z pliku CSV</h2>
+        <div class="flex items-center gap-4">
+          <select v-model="selectedCategoryFilter" class="select select-bordered select-sm">
+            <option value="all">Wszystkie transakcje</option>
+            <option value="uncategorized">Nieskategoryzowane</option>
+            <optgroup v-if="categoryGroups.length > 0" label="Grupy">
+              <option
+                v-for="group in categoryGroups"
+                :key="'group:' + group.id"
+                :value="'group:' + group.id"
+              >
+                {{ group.name }}
+              </option>
+            </optgroup>
+            <optgroup label="Kategorie">
+              <option v-for="category in categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+            </optgroup>
+          </select>
+          <label class="label cursor-pointer gap-2" v-show="selectedCategoryFilter === 'all'">
+            <input type="checkbox" v-model="hideCategorizedRecords" class="checkbox checkbox-sm" />
+            <span class="label-text">Ukryj skategoryzowane</span>
+          </label>
+          <div class="text-sm opacity-70">
+            Wyświetlono {{ displayedRecords.length }} / {{ records.length }}
+          </div>
+        </div>
+      </div>
+
+      <div v-if="records.length === 0" class="text-center py-8 flex-shrink-0">
+        <p class="text-lg opacity-70">Brak danych do wyświetlenia</p>
+      </div>
+
+      <div v-else class="overflow-auto flex-1 min-h-0">
+        <table class="table table-zebra w-full table-pin-rows">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Kategoria</th>
+              <th v-for="(header, index) in headers" :key="index">{{ header }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(record, displayIndex) in displayedRecords" :key="record.originalIndex">
+              <td>{{ record.originalIndex + 1 }}</td>
+              <td>
+                <div class="relative">
+                  <div
+                    v-if="getTransactionCategory(record.originalIndex)"
+                    class="badge badge-lg gap-2 cursor-pointer hover:opacity-80"
+                    :style="{ backgroundColor: getTransactionCategory(record.originalIndex).color, color: getContrastColor(getTransactionCategory(record.originalIndex).color) }"
+                  >
+                    <span @click="openCategorySelector(record.originalIndex, $event)"
+                      >{{ getTransactionCategory(record.originalIndex).name }}</span
+                    >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      class="w-4 h-4 hover:scale-110 transition-transform"
+                      @click="removeCategory(record.originalIndex)"
+                    >
+                      <path
+                        d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+                      />
+                    </svg>
+                  </div>
+                  <button
+                    v-else
+                    class="btn btn-circle btn-sm btn-ghost"
+                    @click="openCategorySelector(record.originalIndex, $event)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="w-5 h-5"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+              <td v-for="(value, colIndex) in record.data" :key="colIndex">{{ value }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Category Selector Dropdown - Positioned near button -->
+      <teleport to="body">
+        <div
+          v-if="selectedTransactionIndex !== null"
+          class="fixed inset-0"
+          style="z-index: 40"
+          @click="closeCategorySelector"
+        >
+          <div
+            ref="categoryDropdown"
+            class="absolute bg-base-100 shadow-2xl rounded-lg border border-base-300 w-64 max-h-80 overflow-auto"
+            style="z-index: 41"
+            :style="dropdownPosition"
+            @click.stop
+          >
+            <div class="p-3">
+              <div class="text-sm font-semibold mb-2 opacity-70">Wybierz kategorię</div>
+              <div class="flex flex-col gap-1">
+                <button
+                  v-for="category in categories"
+                  :key="category.id"
+                  class="btn btn-sm btn-ghost justify-start gap-2 hover:bg-base-200"
+                  @click="assignCategory(selectedTransactionIndex, category.id)"
+                >
+                  <div class="w-3 h-3 rounded" :style="{ backgroundColor: category.color }"></div>
+                  <span class="text-left flex-1">{{ category.name }}</span>
+                </button>
+                <div v-if="categories.length === 0" class="text-center py-3 text-sm opacity-70">
+                  Brak kategorii
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </teleport>
+
+      <div class="card-actions justify-between mt-4 flex-shrink-0 pt-2">
+        <button class="btn btn-outline" @click="goBack">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M11.03 3.97a.75.75 0 0 1 0 1.06l-6.22 6.22H21a.75.75 0 0 1 0 1.5H4.81l6.22 6.22a.75.75 0 1 1-1.06 1.06l-7.5-7.5a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 0 1 1.06 0Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Wróć
+        </button>
+        <!-- Hidden file input for import -->
+        <input
+          type="file"
+          ref="importFileInput"
+          accept=".csv,.txt"
+          class="hidden"
+          @change="onImportFileSelected"
+        />
+        <div class="flex gap-2">
+          <button class="btn btn-secondary" @click="openImportDialog">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Importuj więcej
+          </button>
+          <button class="btn btn-success" @click="saveProject">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Zapisz sesję
+          </button>
+          <button class="btn btn-primary" @click="displayData">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+              <path
+                fill-rule="evenodd"
+                d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Wyświetl
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Management Panel -->
+  <div class="card bg-base-100 shadow-xl w-full mt-6 flex-shrink-0">
+    <div class="card-body">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="card-title">Kategorie i grupy</h2>
+        <button class="btn btn-primary btn-sm" @click="openCategoryManager">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Zarządzaj kategoriami
+        </button>
+      </div>
+
+      <!-- Category Groups -->
+      <div v-if="categoryGroups.length > 0" class="mb-4">
+        <h3 class="text-sm font-semibold mb-2 opacity-70">Grupy kategorii</h3>
+        <div class="flex flex-wrap gap-3">
+          <div
+            v-for="group in categoryGroups"
+            :key="group.id"
+            class="p-3 rounded-lg border-2 cursor-pointer hover:scale-105 transition-transform"
+            :style="{ borderColor: group.color, backgroundColor: group.color + '15' }"
+          >
+            <div class="font-semibold mb-1" :style="{ color: group.color }">{{ group.name }}</div>
+            <div class="flex flex-wrap gap-1">
+              <div
+                v-for="catId in group.categoryIds"
+                :key="catId"
+                class="badge badge-sm"
+                :style="{ backgroundColor: categories.find(c => c.id === catId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === catId)?.color || '#666') }"
+              >
+                {{ categories.find(c => c.id === catId)?.name || 'Nieznana' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual Categories -->
+      <div
+        v-if="categories.length === 0 && categoryGroups.length === 0"
+        class="text-center py-4 opacity-70"
+      >
+        <p>Brak kategorii. Kliknij przycisk "Zarządzaj kategoriami" aby dodać nowe.</p>
+      </div>
+
+      <div v-else-if="categories.length > 0">
+        <h3 class="text-sm font-semibold mb-2 opacity-70">Wszystkie kategorie</h3>
+        <div class="flex flex-wrap gap-2">
+          <div
+            v-for="category in categories"
+            :key="category.id"
+            class="badge badge-lg gap-2 p-4 cursor-pointer hover:scale-105 transition-transform"
+            :style="{ backgroundColor: category.color, color: getContrastColor(category.color) }"
+          >
+            <span>{{ category.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Manager Modal -->
+  <dialog ref="categoryModal" class="modal" style="z-index: 9999">
+    <div class="modal-box max-w-2xl" style="z-index: 10000">
+      <h3 class="font-bold text-lg mb-4">Zarządzanie kategoriami</h3>
+
+      <!-- Add New Category Form -->
+      <div class="form-control mb-6">
+        <label class="label">
+          <span class="label-text">Dodaj nową kategorię</span>
+        </label>
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-2">
+            <input
+              v-model="newCategoryName"
+              type="text"
+              placeholder="Nazwa kategorii (np. Biedronka)"
+              class="input input-bordered flex-1"
+            />
+            <input
+              v-model="newCategoryColor"
+              type="color"
+              class="w-16 h-12 rounded cursor-pointer"
+            />
+            <button
+              type="button"
+              class="btn btn-square"
+              @click="newCategoryColor = generateRandomColor()"
+              title="Losuj kolor"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="size-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <input
+              v-model="newCategoryFilter"
+              type="text"
+              placeholder="Filtr (np. BIEDRONKA) - opcjonalnie"
+              class="input input-bordered flex-1"
+            />
+            <button class="btn btn-primary" @click="addCategory">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="size-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Dodaj
+            </button>
+          </div>
+          <div class="text-sm opacity-70">
+            <strong>Filtr:</strong> Słowo kluczowe do automatycznego przypisywania kategorii (np.
+            "BIEDRONKA" znajdzie wszystkie transakcje z tym słowem w opisie)
+          </div>
+        </div>
+      </div>
+
+      <!-- Existing Categories List -->
+      <div class="divider">Istniejące kategorie</div>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        <div
+          v-for="category in categories"
+          :key="category.id"
+          class="flex items-center justify-between p-3 rounded-lg bg-base-200"
+        >
+          <div class="flex flex-col gap-1 flex-1">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded" :style="{ backgroundColor: category.color }"></div>
+              <span class="font-medium">{{ category.name }}</span>
+              <span
+                v-if="getCategoryGroup(category.id)"
+                class="badge badge-sm"
+                :style="{ borderColor: getCategoryGroup(category.id).color, color: getCategoryGroup(category.id).color }"
+              >
+                {{ getCategoryGroup(category.id).name }}
+              </span>
+            </div>
+            <div v-if="category.filter" class="text-xs opacity-70 ml-11">
+              Filtr:
+              <span class="font-mono bg-base-300 px-2 py-1 rounded">{{ category.filter }}</span>
+            </div>
+          </div>
+          <button class="btn btn-error btn-sm" @click="deleteCategory(category.id)">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Usuń
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Groups Section -->
+      <div class="divider">Grupy kategorii</div>
+
+      <!-- Add/Edit Group Form -->
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">{{ editingGroup ? 'Edytuj grupę' : 'Dodaj nową grupę' }}</span>
+        </label>
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-2">
+            <input
+              v-model="newGroupName"
+              type="text"
+              placeholder="Nazwa grupy (np. Jedzenie)"
+              class="input input-bordered flex-1"
+            />
+            <input v-model="newGroupColor" type="color" class="w-16 h-12 rounded cursor-pointer" />
+            <button
+              type="button"
+              class="btn btn-square"
+              @click="newGroupColor = generateRandomColor()"
+              title="Losuj kolor"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="size-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Category Selection for Group -->
+          <div v-if="categories.length > 0" class="bg-base-200 p-3 rounded-lg">
+            <div class="text-sm mb-2 opacity-70">Wybierz kategorie dla grupy:</div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="category in categories"
+                :key="category.id"
+                type="button"
+                class="badge badge-lg gap-2 p-3 cursor-pointer transition-all"
+                :class="selectedGroupCategories.includes(category.id) ? 'ring-2 ring-offset-2 ring-primary' : 'opacity-60 hover:opacity-100'"
+                :style="{ backgroundColor: category.color, color: getContrastColor(category.color) }"
+                @click="toggleCategoryInGroup(category.id)"
+              >
+                <svg
+                  v-if="selectedGroupCategories.includes(category.id)"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                {{ category.name }}
+              </button>
+            </div>
+          </div>
+          <div v-else class="text-sm opacity-70 text-center py-2">
+            Najpierw dodaj kategorie, aby móc je grupować
+          </div>
+
+          <div class="flex gap-2 justify-end">
+            <button v-if="editingGroup" class="btn btn-ghost" @click="cancelEditGroup">
+              Anuluj
+            </button>
+            <button
+              v-if="editingGroup"
+              class="btn btn-primary"
+              @click="updateCategoryGroup"
+              :disabled="!newGroupName.trim() || selectedGroupCategories.length === 0"
+            >
+              Zapisz zmiany
+            </button>
+            <button
+              v-else
+              class="btn btn-secondary"
+              @click="addCategoryGroup"
+              :disabled="!newGroupName.trim() || selectedGroupCategories.length === 0"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="size-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Dodaj grupę
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Existing Groups List -->
+      <div v-if="categoryGroups.length > 0" class="space-y-2 max-h-48 overflow-y-auto">
+        <div
+          v-for="group in categoryGroups"
+          :key="group.id"
+          class="flex items-center justify-between p-3 rounded-lg border-2"
+          :style="{ borderColor: group.color, backgroundColor: group.color + '10' }"
+        >
+          <div class="flex flex-col gap-1 flex-1">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 rounded flex items-center justify-center"
+                :style="{ backgroundColor: group.color }"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-5 h-5"
+                  :style="{ color: getContrastColor(group.color) }"
+                >
+                  <path
+                    d="M2 4.25A2.25 2.25 0 0 1 4.25 2h2.5A2.25 2.25 0 0 1 9 4.25v2.5A2.25 2.25 0 0 1 6.75 9h-2.5A2.25 2.25 0 0 1 2 6.75v-2.5ZM2 13.25A2.25 2.25 0 0 1 4.25 11h2.5A2.25 2.25 0 0 1 9 13.25v2.5A2.25 2.25 0 0 1 6.75 18h-2.5A2.25 2.25 0 0 1 2 15.75v-2.5ZM11 4.25A2.25 2.25 0 0 1 13.25 2h2.5A2.25 2.25 0 0 1 18 4.25v2.5A2.25 2.25 0 0 1 15.75 9h-2.5A2.25 2.25 0 0 1 11 6.75v-2.5ZM11 13.25A2.25 2.25 0 0 1 13.25 11h2.5A2.25 2.25 0 0 1 18 13.25v2.5A2.25 2.25 0 0 1 15.75 18h-2.5A2.25 2.25 0 0 1 11 15.75v-2.5Z"
+                  />
+                </svg>
+              </div>
+              <span class="font-medium" :style="{ color: group.color }">{{ group.name }}</span>
+            </div>
+            <div class="flex flex-wrap gap-1 ml-11">
+              <span
+                v-for="catId in group.categoryIds"
+                :key="catId"
+                class="badge badge-sm"
+                :style="{ backgroundColor: categories.find(c => c.id === catId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === catId)?.color || '#666') }"
+              >
+                {{ categories.find(c => c.id === catId)?.name || 'Nieznana' }}
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-1">
+            <button class="btn btn-ghost btn-sm" @click="editGroup(group)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="size-4"
+              >
+                <path
+                  d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z"
+                />
+                <path
+                  d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z"
+                />
+              </svg>
+            </button>
+            <button class="btn btn-error btn-sm" @click="deleteCategoryGroup(group.id)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="size-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div v-else class="text-center py-4 opacity-70 text-sm">
+        Brak grup kategorii. Utwórz grupę, aby łatwiej filtrować powiązane kategorie.
+      </div>
+
+      <div class="modal-action justify-between">
+        <button class="btn btn-success" @click="applyCategoryFilters">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Zastosuj filtry
+        </button>
+        <button class="btn" @click="closeCategoryManager">Zamknij</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button @click="closeCategoryManager">close</button>
+    </form>
+  </dialog>
+
+  <!-- Merge Preview Modal -->
+  <dialog :class="['modal', showMergeModal ? 'modal-open' : '']">
+    <div class="modal-box max-w-4xl">
+      <h3 class="font-bold text-lg mb-4">Podgląd importu</h3>
+
+      <!-- Summary -->
+      <div class="stats shadow mb-4 w-full">
+        <div class="stat">
+          <div class="stat-title">Nowe transakcje</div>
+          <div class="stat-value text-success">{{ mergePreview.newRecords.length }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-title">Duplikaty</div>
+          <div class="stat-value text-warning">{{ mergePreview.duplicates.length }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-title">Do zaimportowania</div>
+          <div class="stat-value text-primary">{{ mergePreview.toImport.length }}</div>
+        </div>
+      </div>
+
+      <!-- New Records Preview -->
+      <div v-if="mergePreview.newRecords.length > 0" class="mb-4">
+        <h4 class="font-semibold mb-2 text-success">Nowe transakcje (zostaną dodane):</h4>
+        <div class="overflow-x-auto max-h-48 border rounded-lg">
+          <table class="table table-xs table-zebra">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Opis</th>
+                <th>Kwota</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(t, i) in mergePreview.newRecords.slice(0, 20)" :key="'new-' + i">
+                <td>{{ t['Data operacji'] }}</td>
+                <td class="max-w-xs truncate">{{ t['Opis transakcji'] }}</td>
+                <td class="font-mono">{{ t['Kwota'] }}</td>
+              </tr>
+              <tr v-if="mergePreview.newRecords.length > 20">
+                <td colspan="3" class="text-center opacity-70">
+                  ... i {{ mergePreview.newRecords.length - 20 }} więcej
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Duplicates Preview -->
+      <div v-if="mergePreview.duplicates.length > 0" class="mb-4">
+        <h4 class="font-semibold mb-2 text-warning">
+          Duplikaty (kliknij aby dodać mimo wszystko):
+        </h4>
+        <div class="overflow-x-auto max-h-48 border rounded-lg">
+          <table class="table table-xs">
+            <thead>
+              <tr>
+                <th>Dodaj?</th>
+                <th>Data</th>
+                <th>Opis</th>
+                <th>Kwota</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(t, i) in mergePreview.duplicates.slice(0, 20)"
+                :key="'dup-' + i"
+                class="cursor-pointer hover:bg-base-200"
+                :class="isDuplicateSelected(t) ? 'bg-warning/20' : ''"
+                @click="toggleDuplicateImport(t)"
+              >
+                <td>
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm checkbox-warning"
+                    :checked="isDuplicateSelected(t)"
+                    @click.stop
+                    @change="toggleDuplicateImport(t)"
+                  />
+                </td>
+                <td>{{ t['Data operacji'] }}</td>
+                <td class="max-w-xs truncate">{{ t['Opis transakcji'] }}</td>
+                <td class="font-mono">{{ t['Kwota'] }}</td>
+              </tr>
+              <tr v-if="mergePreview.duplicates.length > 20">
+                <td colspan="4" class="text-center opacity-70">
+                  ... i {{ mergePreview.duplicates.length - 20 }} więcej
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs opacity-70 mt-1">
+          Duplikaty wykrywane na podstawie: data + kwota + opis (pierwsze 50 znaków)
+        </p>
+      </div>
+
+      <div
+        v-if="mergePreview.newRecords.length === 0 && mergePreview.duplicates.length === 0"
+        class="text-center py-8 opacity-70"
+      >
+        Brak transakcji do zaimportowania.
+      </div>
+
+      <div class="modal-action">
+        <button class="btn btn-ghost" @click="closeMergeModal">Anuluj</button>
+        <button
+          class="btn btn-primary"
+          @click="confirmMerge"
+          :disabled="mergePreview.toImport.length === 0"
+        >
+          Importuj {{ mergePreview.toImport.length }} transakcji
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button @click="closeMergeModal">close</button>
+    </form>
+  </dialog>
+</div>

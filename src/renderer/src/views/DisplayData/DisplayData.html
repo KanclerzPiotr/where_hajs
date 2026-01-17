@@ -1,0 +1,511 @@
+<div class="w-full min-h-screen p-6 flex flex-col">
+  <div class="mb-6 flex-shrink-0">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-4xl font-bold mb-2">Podgląd danych</h1>
+        <p class="text-lg opacity-70">Plik: {{ fileName }}</p>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline" @click="goBack">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M11.03 3.97a.75.75 0 0 1 0 1.06l-6.22 6.22H21a.75.75 0 0 1 0 1.5H4.81l6.22 6.22a.75.75 0 1 1-1.06 1.06l-7.5-7.5a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 0 1 1.06 0Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Wróć do kategoryzacji
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 flex-shrink-0">
+      <div class="stats shadow">
+        <div class="stat">
+          <div class="stat-title">Wszystkie transakcje</div>
+          <div class="stat-value text-primary">{{ totalTransactions }}</div>
+        </div>
+      </div>
+      <div class="stats shadow">
+        <div class="stat">
+          <div class="stat-title">Skategoryzowane</div>
+          <div class="stat-value text-success">{{ categorizedTransactions }}</div>
+        </div>
+      </div>
+      <div class="stats shadow">
+        <div class="stat">
+          <div class="stat-title">Bez kategorii</div>
+          <div class="stat-value text-warning">{{ uncategorizedTransactions }}</div>
+        </div>
+      </div>
+      <div class="stats shadow">
+        <div class="stat">
+          <div class="stat-title">Suma wydatków</div>
+          <div class="stat-value text-error">{{ totalSpent }} zł</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters & Controls Panel -->
+    <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
+      <div class="card-body py-4">
+        <!-- Row 1: Date Filter, View Mode, Visibility Controls -->
+        <div class="flex flex-wrap items-center gap-4">
+          <!-- Date Filter -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold">Okres:</span>
+            <select
+              v-model="selectedMonth"
+              @change="selectMonth"
+              class="select select-bordered select-sm"
+            >
+              <option value="">Miesiąc...</option>
+              <option v-for="month in availableMonths" :key="month.value" :value="month.value">
+                {{ month.label }}
+              </option>
+            </select>
+            <input
+              type="date"
+              v-model="startDate"
+              class="input input-bordered input-sm w-36"
+              placeholder="Od"
+            />
+            <span class="text-sm opacity-50">-</span>
+            <input
+              type="date"
+              v-model="endDate"
+              class="input input-bordered input-sm w-36"
+              placeholder="Do"
+            />
+            <button class="btn btn-sm btn-primary" @click="applyDateFilters">Filtruj</button>
+            <button
+              v-if="dateFilterApplied"
+              class="btn btn-sm btn-ghost btn-square"
+              @click="clearDateFilters"
+              title="Wyczyść filtr"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="size-4"
+              >
+                <path
+                  d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+                />
+              </svg>
+            </button>
+            <span class="text-xs opacity-50"
+              >({{ totalTransactions }}/{{ transactions.length }})</span
+            >
+          </div>
+
+          <div class="divider divider-horizontal mx-0"></div>
+
+          <!-- View Mode Switch -->
+          <div class="flex items-center gap-2">
+            <span
+              class="text-sm"
+              :class="viewMode === 'categories' ? 'font-semibold' : 'opacity-50'"
+              >Kategorie</span
+            >
+            <input
+              type="checkbox"
+              class="toggle toggle-primary"
+              :checked="viewMode === 'groups'"
+              :disabled="categoryGroups.length === 0"
+              @change="viewMode = $event.target.checked ? 'groups' : 'categories'"
+            />
+            <span class="text-sm" :class="viewMode === 'groups' ? 'font-semibold' : 'opacity-50'"
+              >Grupy</span
+            >
+          </div>
+
+          <div class="divider divider-horizontal mx-0"></div>
+
+          <!-- Visibility Controls -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold">Widoczność:</span>
+            <template v-if="viewMode === 'categories'">
+              <button class="btn btn-xs btn-ghost" @click="showAllCategories">Pokaż</button>
+              <button class="btn btn-xs btn-ghost" @click="hideAllCategories">Ukryj</button>
+            </template>
+            <template v-else>
+              <button class="btn btn-xs btn-ghost" @click="showAllGroups(); showAllCategories()">
+                Pokaż
+              </button>
+              <button class="btn btn-xs btn-ghost" @click="hideAllGroups(); hideAllCategories()">
+                Ukryj
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Category/Group Visibility Toggles -->
+        <div class="flex flex-wrap gap-2 mt-3">
+          <template v-if="viewMode === 'categories'">
+            <button
+              v-for="category in categories"
+              :key="category.id"
+              class="badge badge-lg gap-2 p-3 cursor-pointer transition-all"
+              :class="isCategoryVisible(category.id) ? '' : 'opacity-40 grayscale'"
+              :style="{ backgroundColor: category.color, color: getContrastColor(category.color) }"
+              @click="toggleCategoryVisibility(category.id)"
+            >
+              <svg
+                v-if="isCategoryVisible(category.id)"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-4 h-4"
+              >
+                <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                <path
+                  fill-rule="evenodd"
+                  d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z"
+                  clip-rule="evenodd"
+                />
+                <path
+                  d="m10.748 13.93 2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z"
+                />
+              </svg>
+              {{ category.name }}
+            </button>
+          </template>
+          <template v-else>
+            <!-- Groups -->
+            <button
+              v-for="group in categoryGroups"
+              :key="'group-' + group.id"
+              class="badge badge-lg gap-2 p-3 cursor-pointer transition-all border-2"
+              :class="isGroupVisible(group.id) ? '' : 'opacity-40 grayscale'"
+              :style="{ borderColor: group.color, backgroundColor: group.color + '30', color: group.color }"
+              @click="toggleGroupVisibility(group.id)"
+            >
+              <svg
+                v-if="isGroupVisible(group.id)"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-4 h-4"
+              >
+                <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                <path
+                  fill-rule="evenodd"
+                  d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z"
+                  clip-rule="evenodd"
+                />
+                <path
+                  d="m10.748 13.93 2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z"
+                />
+              </svg>
+              {{ group.name }}
+            </button>
+            <!-- Ungrouped categories -->
+            <template v-if="ungroupedCategories.length > 0">
+              <div class="divider divider-horizontal mx-1"></div>
+              <span class="text-xs opacity-50 self-center">Bez grupy:</span>
+              <button
+                v-for="category in ungroupedCategories"
+                :key="'ungrouped-' + category.id"
+                class="badge badge-lg gap-2 p-3 cursor-pointer transition-all"
+                :class="isCategoryVisible(category.id) ? '' : 'opacity-40 grayscale'"
+                :style="{ backgroundColor: category.color, color: getContrastColor(category.color) }"
+                @click="toggleCategoryVisibility(category.id)"
+              >
+                <svg
+                  v-if="isCategoryVisible(category.id)"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                  <path
+                    fill-rule="evenodd"
+                    d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z"
+                    clip-rule="evenodd"
+                  />
+                  <path
+                    d="m10.748 13.93 2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z"
+                  />
+                </svg>
+                {{ category.name }}
+              </button>
+            </template>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 flex-shrink-0">
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">
+            Wydatki według {{ viewMode === 'groups' ? 'grup' : 'kategorii' }} (Wykres kołowy)
+          </h2>
+          <div class="h-80">
+            <Pie :data="pieChartData" :options="pieChartOptions" />
+          </div>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">
+            Wydatki według {{ viewMode === 'groups' ? 'grup' : 'kategorii' }} (Wykres słupkowy)
+          </h2>
+          <div class="h-80">
+            <Bar :data="barChartData" :options="barChartOptions" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories/Groups Display -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-auto">
+      <!-- Categories View -->
+      <template v-if="viewMode === 'categories'">
+        <div v-for="category in categories" :key="category.id" class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-6 h-6 rounded" :style="{ backgroundColor: category.color }"></div>
+              <h2 class="card-title">{{ category.name }}</h2>
+              <div class="badge badge-ghost">{{ getCategoryTransactionsCount(category.id) }}</div>
+            </div>
+
+            <div class="overflow-auto max-h-96">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Opis</th>
+                    <th class="text-right">Kwota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="transaction in getCategoryTransactions(category.id)"
+                    :key="transaction.id"
+                  >
+                    <td>{{ getTransactionDescription(transaction) }}</td>
+                    <td class="text-right">{{ getTransactionAmount(transaction) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="divider my-2"></div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">Suma:</span>
+              <span class="text-xl font-bold">{{ getCategoryTotal(category.id) }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Groups View -->
+      <template v-else>
+        <!-- Group Cards -->
+        <div
+          v-for="group in categoryGroups"
+          :key="'group-card-' + group.id"
+          class="card bg-base-100 shadow-xl border-2"
+          :style="{ borderColor: group.color }"
+        >
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-4">
+              <div
+                class="w-6 h-6 rounded flex items-center justify-center"
+                :style="{ backgroundColor: group.color }"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-4 h-4"
+                  :style="{ color: getContrastColor(group.color) }"
+                >
+                  <path
+                    d="M2 4.25A2.25 2.25 0 0 1 4.25 2h2.5A2.25 2.25 0 0 1 9 4.25v2.5A2.25 2.25 0 0 1 6.75 9h-2.5A2.25 2.25 0 0 1 2 6.75v-2.5ZM2 13.25A2.25 2.25 0 0 1 4.25 11h2.5A2.25 2.25 0 0 1 9 13.25v2.5A2.25 2.25 0 0 1 6.75 18h-2.5A2.25 2.25 0 0 1 2 15.75v-2.5ZM11 4.25A2.25 2.25 0 0 1 13.25 2h2.5A2.25 2.25 0 0 1 18 4.25v2.5A2.25 2.25 0 0 1 15.75 9h-2.5A2.25 2.25 0 0 1 11 6.75v-2.5ZM11 13.25A2.25 2.25 0 0 1 13.25 11h2.5A2.25 2.25 0 0 1 18 13.25v2.5A2.25 2.25 0 0 1 15.75 18h-2.5A2.25 2.25 0 0 1 11 15.75v-2.5Z"
+                  />
+                </svg>
+              </div>
+              <h2 class="card-title" :style="{ color: group.color }">{{ group.name }}</h2>
+              <div class="badge badge-ghost">{{ getGroupTransactionsCount(group.id) }}</div>
+            </div>
+
+            <!-- Categories in this group -->
+            <div class="flex flex-wrap gap-1 mb-3">
+              <span
+                v-for="catId in group.categoryIds"
+                :key="catId"
+                class="badge badge-sm"
+                :style="{ backgroundColor: categories.find(c => c.id === catId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === catId)?.color || '#666') }"
+              >
+                {{ categories.find(c => c.id === catId)?.name || 'Nieznana' }}
+              </span>
+            </div>
+
+            <div class="overflow-auto max-h-96">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Kategoria</th>
+                    <th>Opis</th>
+                    <th class="text-right">Kwota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="transaction in getGroupTransactions(group.id)" :key="transaction.id">
+                    <td>
+                      <span
+                        class="badge badge-sm"
+                        :style="{ backgroundColor: categories.find(c => c.id === transaction.categoryId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === transaction.categoryId)?.color || '#666') }"
+                      >
+                        {{ categories.find(c => c.id === transaction.categoryId)?.name || '?' }}
+                      </span>
+                    </td>
+                    <td>{{ getTransactionDescription(transaction) }}</td>
+                    <td class="text-right">{{ getTransactionAmount(transaction) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="divider my-2"></div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">Suma:</span>
+              <span class="text-xl font-bold" :style="{ color: group.color }"
+                >{{ getGroupTotal(group.id) }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Ungrouped Categories -->
+        <div
+          v-for="category in ungroupedCategories"
+          :key="'ungrouped-card-' + category.id"
+          class="card bg-base-100 shadow-xl"
+        >
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-6 h-6 rounded" :style="{ backgroundColor: category.color }"></div>
+              <h2 class="card-title">{{ category.name }}</h2>
+              <div class="badge badge-ghost">{{ getCategoryTransactionsCount(category.id) }}</div>
+              <span class="text-xs opacity-50">(bez grupy)</span>
+            </div>
+
+            <div class="overflow-auto max-h-96">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Opis</th>
+                    <th class="text-right">Kwota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="transaction in getCategoryTransactions(category.id)"
+                    :key="transaction.id"
+                  >
+                    <td>{{ getTransactionDescription(transaction) }}</td>
+                    <td class="text-right">{{ getTransactionAmount(transaction) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="divider my-2"></div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">Suma:</span>
+              <span class="text-xl font-bold">{{ getCategoryTotal(category.id) }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Uncategorized Transactions -->
+      <div
+        v-if="uncategorizedTransactions > 0"
+        class="card bg-base-100 shadow-xl border-2 border-warning"
+      >
+        <div class="card-body">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-6 h-6 rounded bg-base-300"></div>
+            <h2 class="card-title">Bez kategorii</h2>
+            <div class="badge badge-warning">{{ uncategorizedTransactions }}</div>
+          </div>
+
+          <div class="overflow-auto max-h-96">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Opis</th>
+                  <th class="text-right">Kwota</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="transaction in getUncategorizedTransactions()" :key="transaction.id">
+                  <td>{{ getTransactionDescription(transaction) }}</td>
+                  <td class="text-right">{{ getTransactionAmount(transaction) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider my-2"></div>
+          <div class="flex justify-between items-center">
+            <span class="font-semibold">Suma:</span>
+            <span class="text-xl font-bold">{{ getUncategorizedTotal() }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

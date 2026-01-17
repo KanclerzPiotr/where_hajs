@@ -1,0 +1,323 @@
+<div class="w-full min-h-screen p-6 flex flex-col">
+  <!-- Header -->
+  <div class="mb-6 flex-shrink-0">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-4xl font-bold mb-2">
+          {{ isImportMode ? 'Import dodatkowych danych' : 'Konfiguracja kolumn' }}
+        </h1>
+        <p class="text-lg opacity-70">Plik: {{ fileName }}</p>
+        <div v-if="isImportMode" class="badge badge-secondary mt-2">Tryb importu</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline" @click="goBack">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M11.03 3.97a.75.75 0 0 1 0 1.06l-6.22 6.22H21a.75.75 0 0 1 0 1.5H4.81l6.22 6.22a.75.75 0 1 1-1.06 1.06l-7.5-7.5a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 0 1 1.06 0Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Anuluj
+        </button>
+        <button class="btn btn-primary" :disabled="!isValid" @click="continueToCategizer">
+          Kontynuuj
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M12.97 3.97a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 0 1 0 1.06l-7.5 7.5a.75.75 0 1 1-1.06-1.06l6.22-6.22H3a.75.75 0 0 1 0-1.5h16.19l-6.22-6.22a.75.75 0 0 1 0-1.06Z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Card -->
+  <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
+    <div class="card-body py-4">
+      <div class="flex flex-wrap items-center gap-6">
+        <!-- Header Row Toggle -->
+        <label class="label cursor-pointer gap-3">
+          <input type="checkbox" v-model="hasHeaderRow" class="checkbox checkbox-primary" />
+          <span class="label-text font-semibold">Pierwszy wiersz zawiera nagłówki</span>
+        </label>
+
+        <div class="divider divider-horizontal mx-0"></div>
+
+        <!-- Preset Selection -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-semibold">Zapisane konfiguracje:</span>
+          <select v-model="selectedPresetId" class="select select-bordered select-sm">
+            <option value="">Wybierz...</option>
+            <option v-for="preset in presets" :key="preset.id" :value="preset.id">
+              {{ preset.name }}
+            </option>
+          </select>
+          <button
+            class="btn btn-sm btn-ghost"
+            @click="showSavePresetModal = true"
+            title="Zapisz obecną konfigurację"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path
+                d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+              />
+            </svg>
+          </button>
+          <button
+            v-if="selectedPresetId"
+            class="btn btn-sm btn-ghost btn-error"
+            @click="deletePreset"
+            title="Usuń konfigurację"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Preview Card -->
+  <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
+    <div class="card-body">
+      <h2 class="card-title mb-4">Podgląd danych (pierwsze {{ previewRowCount }} wierszy)</h2>
+
+      <div class="overflow-x-auto">
+        <table class="table table-sm table-zebra">
+          <thead>
+            <tr>
+              <th class="bg-base-200">#</th>
+              <th v-for="col in columnHeaders" :key="col.index" class="bg-base-200 min-w-32">
+                <div class="font-semibold">{{ col.name }}</div>
+                <div class="text-xs opacity-50 font-normal">Kolumna {{ col.index + 1 }}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, rowIndex) in previewRows" :key="rowIndex">
+              <td class="font-mono text-xs opacity-50">{{ rowIndex + 1 }}</td>
+              <td v-for="col in columnHeaders" :key="col.index" class="max-w-xs truncate">
+                {{ row[col.index] || '' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Column Mapping Card -->
+  <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
+    <div class="card-body">
+      <h2 class="card-title mb-4">Mapowanie kolumn</h2>
+      <p class="text-sm opacity-70 mb-4">
+        Kliknij kolumny, które odpowiadają danym polom. Dla opisu transakcji możesz wybrać wiele
+        kolumn - zostaną połączone.
+      </p>
+
+      <!-- Mapping Fields -->
+      <div class="space-y-6">
+        <!-- Transaction Date -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">
+              Data operacji <span class="text-error">*</span>
+            </span>
+            <span class="label-text-alt opacity-50">
+              {{ mappings.transactionDate.length > 0 ? 'Wybrano: ' +
+              mappings.transactionDate.map(i=> columnHeaders[i]?.name).join(', ') : 'Nie wybrano' }}
+            </span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="col in columnHeaders"
+              :key="'date-' + col.index"
+              class="btn btn-sm"
+              :class="isColumnSelected('transactionDate', col.index) ? 'btn-primary' : 'btn-outline'"
+              @click="toggleColumnMapping('transactionDate', col.index)"
+            >
+              {{ col.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Accounting Date -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Data księgowania</span>
+            <span class="label-text-alt opacity-50">
+              {{ mappings.accountingDate.length > 0 ? 'Wybrano: ' + mappings.accountingDate.map(i =>
+              columnHeaders[i]?.name).join(', ') : 'Opcjonalne - użyje daty operacji' }}
+            </span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="col in columnHeaders"
+              :key="'acc-date-' + col.index"
+              class="btn btn-sm"
+              :class="isColumnSelected('accountingDate', col.index) ? 'btn-secondary' : 'btn-outline'"
+              @click="toggleColumnMapping('accountingDate', col.index)"
+            >
+              {{ col.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">
+              Opis transakcji <span class="text-error">*</span>
+            </span>
+            <span class="label-text-alt opacity-50">
+              {{ mappings.description.length > 0 ? 'Wybrano: ' + mappings.description.map(i =>
+              columnHeaders[i]?.name).join(' + ') : 'Nie wybrano (można wybrać wiele)' }}
+            </span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="col in columnHeaders"
+              :key="'desc-' + col.index"
+              class="btn btn-sm"
+              :class="isColumnSelected('description', col.index) ? 'btn-accent' : 'btn-outline'"
+              @click="toggleColumnMapping('description', col.index)"
+            >
+              {{ col.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold"> Kwota <span class="text-error">*</span> </span>
+            <span class="label-text-alt opacity-50">
+              {{ mappings.amount.length > 0 ? 'Wybrano: ' + mappings.amount.map(i =>
+              columnHeaders[i]?.name).join(', ') : 'Nie wybrano' }}
+            </span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="col in columnHeaders"
+              :key="'amount-' + col.index"
+              class="btn btn-sm"
+              :class="isColumnSelected('amount', col.index) ? 'btn-success' : 'btn-outline'"
+              @click="toggleColumnMapping('amount', col.index)"
+            >
+              {{ col.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation Errors -->
+      <div v-if="validationErrors.length > 0" class="alert alert-warning mt-4">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <div>
+          <div class="font-semibold">Uzupełnij wymagane pola:</div>
+          <ul class="list-disc list-inside text-sm">
+            <li v-for="error in validationErrors" :key="error">{{ error }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Preview Card -->
+  <div class="card bg-base-100 shadow-xl mb-6 flex-1 min-h-0">
+    <div class="card-body">
+      <h2 class="card-title mb-4">Podgląd wyniku</h2>
+
+      <div class="overflow-auto flex-1">
+        <table class="table table-sm table-zebra">
+          <thead>
+            <tr>
+              <th class="bg-base-200">#</th>
+              <th class="bg-primary/20">Data operacji</th>
+              <th class="bg-secondary/20">Data księgowania</th>
+              <th class="bg-accent/20">Opis transakcji</th>
+              <th class="bg-success/20">Kwota</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, rowIndex) in previewRows" :key="'result-' + rowIndex">
+              <td class="font-mono text-xs opacity-50">{{ rowIndex + 1 }}</td>
+              <td class="bg-primary/5">{{ getPreviewResult(row).transactionDate }}</td>
+              <td class="bg-secondary/5">{{ getPreviewResult(row).accountingDate }}</td>
+              <td class="bg-accent/5 max-w-md truncate">{{ getPreviewResult(row).description }}</td>
+              <td class="bg-success/5 font-mono">{{ getPreviewResult(row).amount }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Preset Modal -->
+  <dialog :class="['modal', showSavePresetModal ? 'modal-open' : '']">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg mb-4">Zapisz konfigurację</h3>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Nazwa konfiguracji</span>
+        </label>
+        <input
+          type="text"
+          v-model="newPresetName"
+          placeholder="np. mBank Export"
+          class="input input-bordered"
+          @keyup.enter="savePreset"
+        />
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-ghost" @click="showSavePresetModal = false">Anuluj</button>
+        <button class="btn btn-primary" @click="savePreset" :disabled="!newPresetName.trim()">
+          Zapisz
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button @click="showSavePresetModal = false">close</button>
+    </form>
+  </dialog>
+</div>
