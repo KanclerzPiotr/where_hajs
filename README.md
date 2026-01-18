@@ -1,5 +1,7 @@
 # WhereHajs
 
+> **100% vibe coded** - ta aplikacja zostala w calosci stworzona przy uzyciu AI, bez recznego pisania kodu. Moze nie zawsze dzialac bo nie do końca wiem co się tu dzieje, ale *u mnie dziala*.
+
 Aplikacja desktopowa do analizy i kategoryzacji transakcji bankowych. Importuj wyciagi z banku, przypisuj kategorie i analizuj swoje wydatki.
 
 ## Funkcje

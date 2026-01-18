@@ -12,7 +12,6 @@ asarUnpack:
   - resources/**
 win:
   executableName: wherehajs
-  icon: build/icon.ico
   target:
     - nsis
     - portable
