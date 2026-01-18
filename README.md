@@ -1,61 +1,65 @@
 # WhereHajs
 
-> **100% vibe coded** - ta aplikacja zostala w calosci stworzona przy uzyciu AI, bez recznego pisania kodu. Moze nie zawsze dzialac bo nie do końca wiem co się tu dzieje, ale *u mnie dziala*.
+> **100% vibe coded** - this application was entirely created using AI, without writing any code manually. It may not always work because I don't fully understand what's happening here, but *it works on my machine*.
 
-Aplikacja desktopowa do analizy i kategoryzacji transakcji bankowych. Importuj wyciagi z banku, przypisuj kategorie i analizuj swoje wydatki.
+A desktop application for analyzing and categorizing bank transactions. Import bank statements, assign categories, and analyze your spending.
 
-## Funkcje
+## Features
 
-### Import danych
-- Import plikow CSV z banku
-- Automatyczne wykrywanie formatu i kodowania pliku
-- Elastyczne mapowanie kolumn - sam decydujesz co jest data, opisem i kwota
-- Zapisywanie konfiguracji mapowania jako preset do ponownego uzycia
+### Data Import
+- Import CSV files from your bank
+- Automatic detection of file format and encoding
+- Flexible column mapping - you decide what is date, description, and amount
+- Save mapping configurations as presets for reuse
 
-### Kategoryzacja
-- Tworzenie wlasnych kategorii z kolorami
-- Automatyczne przypisywanie kategorii na podstawie slow kluczowych w opisie transakcji
-- Reczne przypisywanie kategorii jednym kliknieciem
-- Grupowanie kategorii (np. grupa "Jedzenie" zawierajaca kategorie Biedronka, Lidl, Zabka)
-- Filtrowanie widoku po kategorii lub grupie
+### Categorization
+- Create custom categories with colors
+- Automatic category assignment based on keywords in transaction descriptions
+- One-click manual category assignment
+- Category grouping (e.g., "Food" group containing Walmart, Target, Costco categories)
+- Filter view by category or group
 
-### Laczenie danych z wielu plikow
-- Import dodatkowych transakcji z nowych plikow
-- Automatyczne wykrywanie duplikatow przy nakladajacych sie okresach
-- Podglad przed importem z mozliwoscia wyboru co zaimportowac
+### Merging Data from Multiple Files
+- Import additional transactions from new files
+- Automatic duplicate detection for overlapping periods
+- Preview before import with ability to choose what to import
 
-### Analiza wydatkow
-- Podsumowanie wszystkich transakcji
-- Wykres kolowy wydatkow wedlug kategorii
-- Filtrowanie po zakresie dat
-- Podglad w trybie kategorii lub grup
+### Spending Analysis
+- Summary of all transactions
+- Pie chart of spending by category
+- Date range filtering
+- View in category or group mode
 
-### Zapis i kontynuacja pracy
-- Zapis calego projektu do pliku JSON
-- Szybki dostep do ostatnio otwartego projektu
-- Pytanie o zapis przy zamykaniu aplikacji z niezapisanymi zmianami
+### Save and Continue Work
+- Save entire project to JSON file
+- Quick access to recently opened project
+- Prompt to save when closing app with unsaved changes
 
-### Inne
-- Pelna praca offline - aplikacja nie wymaga internetu
-- Wersja portable - pojedynczy plik exe bez instalacji
+### Other
+- Full offline operation - no internet required
+- Portable version - single exe file without installation
 
-## Instalacja
+### Localization
+- Available in English and Polish
+- Language switcher on the landing page
+
+## Installation
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Budowanie
+## Building
 
 ```bash
 npm run build:win
 ```
 
-Pliki wykonywalne w folderze `dist/`:
-- `wherehajs-1.0.0-setup.exe` - Instalator
-- `wherehajs-1.0.0-portable.exe` - Wersja portable
+Executable files in `dist/` folder:
+- `wherehajs-1.0.0-setup.exe` - Installer
+- `wherehajs-1.0.0-portable.exe` - Portable version
 
-## Licencja
+## License
 
 MIT
