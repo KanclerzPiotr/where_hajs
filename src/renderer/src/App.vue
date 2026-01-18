@@ -4,12 +4,14 @@
   <!-- Close Confirmation Modal -->
   <dialog ref="closeModal" class="modal">
     <div class="modal-box">
-      <h3 class="font-bold text-lg">Zamknij aplikację?</h3>
-      <p class="py-4">Czy chcesz zapisać sesję przed zamknięciem?</p>
+      <h3 class="font-bold text-lg">{{ $t('app.closeApp') }}</h3>
+      <p class="py-4">{{ $t('app.saveBeforeClose') }}</p>
       <div class="modal-action">
-        <button class="btn btn-ghost" @click="handleCloseCancel">Anuluj</button>
-        <button class="btn btn-error" @click="handleCloseDiscard">Nie zapisuj</button>
-        <button class="btn btn-primary" @click="handleCloseSave">Zapisz i zamknij</button>
+        <button class="btn btn-ghost" @click="handleCloseCancel">{{ $t('app.cancel') }}</button>
+        <button class="btn btn-error" @click="handleCloseDiscard">{{ $t('app.dontSave') }}</button>
+        <button class="btn btn-primary" @click="handleCloseSave">
+          {{ $t('app.saveAndClose') }}
+        </button>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -20,6 +22,9 @@
 
 <script setup>
 import { ref, onMounted, provide } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const closeModal = ref(null)
 const projectDataRef = ref(null)
@@ -83,7 +88,7 @@ const handleCloseSave = async () => {
       }
 
       if (!result.success) {
-        alert('Nie udało się zapisać pliku: ' + (result.error || 'Nieznany błąd'))
+        alert(t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')))
         closeModal.value?.close()
         window.api?.sendCloseResponse(false)
         return
@@ -98,7 +103,7 @@ const handleCloseSave = async () => {
       localStorage.setItem('recentProject', JSON.stringify(recentProject))
     } catch (error) {
       console.error('Error saving on close:', error)
-      alert('Błąd podczas zapisywania')
+      alert(t('errors.errorSaving'))
       closeModal.value?.close()
       window.api?.sendCloseResponse(false)
       return

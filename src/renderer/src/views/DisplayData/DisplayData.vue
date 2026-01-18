@@ -3,6 +3,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -18,6 +19,8 @@ import { Pie, Bar } from 'vue-chartjs'
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title)
 
 const router = useRouter()
+const { t, tm } = useI18n()
+
 const fileName = ref('')
 const projectData = ref(null)
 const categories = ref([])
@@ -61,7 +64,7 @@ onMounted(() => {
   }
 
   projectData.value = data.projectData
-  fileName.value = data.fileName || projectData.value.fileName || 'Nieznany plik'
+  fileName.value = data.fileName || projectData.value.fileName || t('app.unknownFile')
   categories.value = projectData.value.categories || []
   categoryGroups.value = projectData.value.categoryGroups || []
   transactions.value = projectData.value.transactions || []
@@ -150,6 +153,27 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
+// Get month names from translations
+const getMonthNames = () => {
+  const months = tm('months')
+  return Array.isArray(months)
+    ? months
+    : [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ]
+}
+
 const availableMonths = computed(() => {
   if (!transactions.value || transactions.value.length === 0) return []
 
@@ -167,21 +191,7 @@ const availableMonths = computed(() => {
   })
 
   const months = Array.from(monthsSet).sort().reverse()
-
-  const monthNames = [
-    'Styczeń',
-    'Luty',
-    'Marzec',
-    'Kwiecień',
-    'Maj',
-    'Czerwiec',
-    'Lipiec',
-    'Sierpień',
-    'Wrzesień',
-    'Październik',
-    'Listopad',
-    'Grudzień'
-  ]
+  const monthNames = getMonthNames()
 
   return months.map((monthKey) => {
     const [year, month] = monthKey.split('-')
@@ -254,7 +264,7 @@ const getTransactionDescription = (transaction) => {
       return transaction[field]
     }
   }
-  return 'Brak opisu'
+  return t('displayData.noDescription')
 }
 
 const getTransactionAmount = (transaction) => {
@@ -459,7 +469,7 @@ const pieChartData = computed(() => {
   // If no data, show placeholder
   if (data.length === 0) {
     return {
-      labels: ['Brak danych'],
+      labels: [t('app.noData')],
       datasets: [
         {
           data: [1],
@@ -533,10 +543,10 @@ const barChartData = computed(() => {
   // If no data, show placeholder
   if (data.length === 0) {
     return {
-      labels: ['Brak danych'],
+      labels: [t('app.noData')],
       datasets: [
         {
-          label: 'Kwota (zł)',
+          label: t('displayData.amountLabel'),
           data: [0],
           backgroundColor: ['#cccccc'],
           borderWidth: 2,
@@ -550,7 +560,7 @@ const barChartData = computed(() => {
     labels,
     datasets: [
       {
-        label: 'Kwota (zł)',
+        label: t('displayData.amountLabel'),
         data,
         backgroundColor,
         borderWidth: 2,

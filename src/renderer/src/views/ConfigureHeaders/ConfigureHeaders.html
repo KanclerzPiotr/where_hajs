@@ -4,10 +4,12 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-4xl font-bold mb-2">
-          {{ isImportMode ? 'Import dodatkowych danych' : 'Konfiguracja kolumn' }}
+          {{ isImportMode ? $t('configureHeaders.importTitle') : $t('configureHeaders.title') }}
         </h1>
-        <p class="text-lg opacity-70">Plik: {{ fileName }}</p>
-        <div v-if="isImportMode" class="badge badge-secondary mt-2">Tryb importu</div>
+        <p class="text-lg opacity-70">{{ $t('app.file') }}: {{ fileName }}</p>
+        <div v-if="isImportMode" class="badge badge-secondary mt-2">
+          {{ $t('configureHeaders.importMode') }}
+        </div>
       </div>
       <div class="flex gap-2">
         <button class="btn btn-outline" @click="goBack">
@@ -23,10 +25,10 @@
               clip-rule="evenodd"
             />
           </svg>
-          Anuluj
+          {{ $t('app.cancel') }}
         </button>
         <button class="btn btn-primary" :disabled="!isValid" @click="continueToCategizer">
-          Kontynuuj
+          {{ $t('app.continue') }}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -51,16 +53,16 @@
         <!-- Header Row Toggle -->
         <label class="label cursor-pointer gap-3">
           <input type="checkbox" v-model="hasHeaderRow" class="checkbox checkbox-primary" />
-          <span class="label-text font-semibold">Pierwszy wiersz zawiera nagłówki</span>
+          <span class="label-text font-semibold">{{ $t('configureHeaders.firstRowHeaders') }}</span>
         </label>
 
         <div class="divider divider-horizontal mx-0"></div>
 
         <!-- Preset Selection -->
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold">Zapisane konfiguracje:</span>
+          <span class="text-sm font-semibold">{{ $t('configureHeaders.savedConfigs') }}:</span>
           <select v-model="selectedPresetId" class="select select-bordered select-sm">
-            <option value="">Wybierz...</option>
+            <option value="">{{ $t('configureHeaders.selectConfig') }}</option>
             <option v-for="preset in presets" :key="preset.id" :value="preset.id">
               {{ preset.name }}
             </option>
@@ -68,7 +70,7 @@
           <button
             class="btn btn-sm btn-ghost"
             @click="showSavePresetModal = true"
-            title="Zapisz obecną konfigurację"
+            :title="$t('configureHeaders.saveCurrentConfig')"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -85,7 +87,7 @@
             v-if="selectedPresetId"
             class="btn btn-sm btn-ghost btn-error"
             @click="deletePreset"
-            title="Usuń konfigurację"
+            :title="$t('configureHeaders.deleteConfig')"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -108,7 +110,9 @@
   <!-- Data Preview Card -->
   <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
     <div class="card-body">
-      <h2 class="card-title mb-4">Podgląd danych (pierwsze {{ previewRowCount }} wierszy)</h2>
+      <h2 class="card-title mb-4">
+        {{ $t('configureHeaders.dataPreview', { count: previewRowCount }) }}
+      </h2>
 
       <div class="overflow-x-auto">
         <table class="table table-sm table-zebra">
@@ -117,7 +121,9 @@
               <th class="bg-base-200">#</th>
               <th v-for="col in columnHeaders" :key="col.index" class="bg-base-200 min-w-32">
                 <div class="font-semibold">{{ col.name }}</div>
-                <div class="text-xs opacity-50 font-normal">Kolumna {{ col.index + 1 }}</div>
+                <div class="text-xs opacity-50 font-normal">
+                  {{ $t('configureHeaders.column') }} {{ col.index + 1 }}
+                </div>
               </th>
             </tr>
           </thead>
@@ -137,11 +143,8 @@
   <!-- Column Mapping Card -->
   <div class="card bg-base-100 shadow-xl mb-6 flex-shrink-0">
     <div class="card-body">
-      <h2 class="card-title mb-4">Mapowanie kolumn</h2>
-      <p class="text-sm opacity-70 mb-4">
-        Kliknij kolumny, które odpowiadają danym polom. Dla opisu transakcji możesz wybrać wiele
-        kolumn - zostaną połączone.
-      </p>
+      <h2 class="card-title mb-4">{{ $t('configureHeaders.columnMapping') }}</h2>
+      <p class="text-sm opacity-70 mb-4">{{ $t('configureHeaders.columnMappingHelp') }}</p>
 
       <!-- Mapping Fields -->
       <div class="space-y-6">
@@ -149,11 +152,12 @@
         <div class="form-control">
           <label class="label">
             <span class="label-text font-semibold">
-              Data operacji <span class="text-error">*</span>
+              {{ $t('configureHeaders.transactionDate') }} <span class="text-error">*</span>
             </span>
             <span class="label-text-alt opacity-50">
-              {{ mappings.transactionDate.length > 0 ? 'Wybrano: ' +
-              mappings.transactionDate.map(i=> columnHeaders[i]?.name).join(', ') : 'Nie wybrano' }}
+              {{ mappings.transactionDate.length > 0 ? $t('configureHeaders.selected') + ': ' +
+              mappings.transactionDate.map(i=> columnHeaders[i]?.name).join(', ') :
+              $t('configureHeaders.notSelected') }}
             </span>
           </label>
           <div class="flex flex-wrap gap-2">
@@ -172,10 +176,13 @@
         <!-- Accounting Date -->
         <div class="form-control">
           <label class="label">
-            <span class="label-text font-semibold">Data księgowania</span>
+            <span class="label-text font-semibold"
+              >{{ $t('configureHeaders.accountingDate') }}</span
+            >
             <span class="label-text-alt opacity-50">
-              {{ mappings.accountingDate.length > 0 ? 'Wybrano: ' + mappings.accountingDate.map(i =>
-              columnHeaders[i]?.name).join(', ') : 'Opcjonalne - użyje daty operacji' }}
+              {{ mappings.accountingDate.length > 0 ? $t('configureHeaders.selected') + ': ' +
+              mappings.accountingDate.map(i => columnHeaders[i]?.name).join(', ') :
+              $t('configureHeaders.optional') }}
             </span>
           </label>
           <div class="flex flex-wrap gap-2">
@@ -195,11 +202,12 @@
         <div class="form-control">
           <label class="label">
             <span class="label-text font-semibold">
-              Opis transakcji <span class="text-error">*</span>
+              {{ $t('configureHeaders.description') }} <span class="text-error">*</span>
             </span>
             <span class="label-text-alt opacity-50">
-              {{ mappings.description.length > 0 ? 'Wybrano: ' + mappings.description.map(i =>
-              columnHeaders[i]?.name).join(' + ') : 'Nie wybrano (można wybrać wiele)' }}
+              {{ mappings.description.length > 0 ? $t('configureHeaders.selected') + ': ' +
+              mappings.description.map(i => columnHeaders[i]?.name).join(' + ') :
+              $t('configureHeaders.canSelectMultiple') }}
             </span>
           </label>
           <div class="flex flex-wrap gap-2">
@@ -218,10 +226,13 @@
         <!-- Amount -->
         <div class="form-control">
           <label class="label">
-            <span class="label-text font-semibold"> Kwota <span class="text-error">*</span> </span>
+            <span class="label-text font-semibold">
+              {{ $t('configureHeaders.amount') }} <span class="text-error">*</span>
+            </span>
             <span class="label-text-alt opacity-50">
-              {{ mappings.amount.length > 0 ? 'Wybrano: ' + mappings.amount.map(i =>
-              columnHeaders[i]?.name).join(', ') : 'Nie wybrano' }}
+              {{ mappings.amount.length > 0 ? $t('configureHeaders.selected') + ': ' +
+              mappings.amount.map(i => columnHeaders[i]?.name).join(', ') :
+              $t('configureHeaders.notSelected') }}
             </span>
           </label>
           <div class="flex flex-wrap gap-2">
@@ -254,7 +265,7 @@
           />
         </svg>
         <div>
-          <div class="font-semibold">Uzupełnij wymagane pola:</div>
+          <div class="font-semibold">{{ $t('errors.fillRequiredFields') }}:</div>
           <ul class="list-disc list-inside text-sm">
             <li v-for="error in validationErrors" :key="error">{{ error }}</li>
           </ul>
@@ -266,17 +277,17 @@
   <!-- Result Preview Card -->
   <div class="card bg-base-100 shadow-xl mb-6 flex-1 min-h-0">
     <div class="card-body">
-      <h2 class="card-title mb-4">Podgląd wyniku</h2>
+      <h2 class="card-title mb-4">{{ $t('configureHeaders.resultPreview') }}</h2>
 
       <div class="overflow-auto flex-1">
         <table class="table table-sm table-zebra">
           <thead>
             <tr>
               <th class="bg-base-200">#</th>
-              <th class="bg-primary/20">Data operacji</th>
-              <th class="bg-secondary/20">Data księgowania</th>
-              <th class="bg-accent/20">Opis transakcji</th>
-              <th class="bg-success/20">Kwota</th>
+              <th class="bg-primary/20">{{ $t('configureHeaders.transactionDate') }}</th>
+              <th class="bg-secondary/20">{{ $t('configureHeaders.accountingDate') }}</th>
+              <th class="bg-accent/20">{{ $t('configureHeaders.description') }}</th>
+              <th class="bg-success/20">{{ $t('configureHeaders.amount') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -296,23 +307,25 @@
   <!-- Save Preset Modal -->
   <dialog :class="['modal', showSavePresetModal ? 'modal-open' : '']">
     <div class="modal-box">
-      <h3 class="font-bold text-lg mb-4">Zapisz konfigurację</h3>
+      <h3 class="font-bold text-lg mb-4">{{ $t('configureHeaders.saveConfigModal.title') }}</h3>
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Nazwa konfiguracji</span>
+          <span class="label-text">{{ $t('configureHeaders.saveConfigModal.nameLabel') }}</span>
         </label>
         <input
           type="text"
           v-model="newPresetName"
-          placeholder="np. mBank Export"
+          :placeholder="$t('configureHeaders.saveConfigModal.namePlaceholder')"
           class="input input-bordered"
           @keyup.enter="savePreset"
         />
       </div>
       <div class="modal-action">
-        <button class="btn btn-ghost" @click="showSavePresetModal = false">Anuluj</button>
+        <button class="btn btn-ghost" @click="showSavePresetModal = false">
+          {{ $t('app.cancel') }}
+        </button>
         <button class="btn btn-primary" @click="savePreset" :disabled="!newPresetName.trim()">
-          Zapisz
+          {{ $t('app.save') }}
         </button>
       </div>
     </div>

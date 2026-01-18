@@ -3,8 +3,11 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const { t } = useI18n()
+
 const fileName = ref('')
 const rawText = ref('')
 const rows = ref([])
@@ -59,7 +62,7 @@ onMounted(() => {
   }
 
   rawText.value = data.rawText
-  fileName.value = data.fileName || 'Nieznany plik'
+  fileName.value = data.fileName || t('app.unknownFile')
   delimiter.value = data.delimiter || detectDelimiter(data.rawText)
   isImportMode.value = data.isImport || false
 
@@ -137,13 +140,13 @@ const columnHeaders = computed(() => {
   if (hasHeaderRow.value) {
     return rows.value[0].map((header, index) => ({
       index,
-      name: header || `Kolumna ${index + 1}`,
+      name: header || `${t('configureHeaders.column')} ${index + 1}`,
       originalName: header
     }))
   } else {
     return Array.from({ length: columnCount.value }, (_, index) => ({
       index,
-      name: `Kolumna ${index + 1}`,
+      name: `${t('configureHeaders.column')} ${index + 1}`,
       originalName: null
     }))
   }
@@ -167,9 +170,21 @@ const autoDetectMappings = () => {
   const headers = rows.value[0].map((h) => (h || '').toLowerCase())
 
   // Date detection
-  const dateKeywords = ['data operacji', 'data transakcji', 'data', 'date']
-  const accountingDateKeywords = ['data księgowania', 'data waluty', 'data rozliczenia']
-  const descriptionKeywords = ['opis transakcji', 'opis', 'tytuł', 'description', 'title']
+  const dateKeywords = ['data operacji', 'data transakcji', 'data', 'date', 'transaction date']
+  const accountingDateKeywords = [
+    'data księgowania',
+    'data waluty',
+    'data rozliczenia',
+    'accounting date'
+  ]
+  const descriptionKeywords = [
+    'opis transakcji',
+    'opis',
+    'tytuł',
+    'description',
+    'title',
+    'transaction description'
+  ]
   const amountKeywords = ['kwota', 'amount', 'wartość', 'value', 'suma']
 
   headers.forEach((header, index) => {
@@ -250,9 +265,12 @@ const isValid = computed(() => {
 
 const validationErrors = computed(() => {
   const errors = []
-  if (mappings.value.transactionDate.length === 0) errors.push('Data operacji jest wymagana')
-  if (mappings.value.description.length === 0) errors.push('Opis transakcji jest wymagany')
-  if (mappings.value.amount.length === 0) errors.push('Kwota jest wymagana')
+  if (mappings.value.transactionDate.length === 0)
+    errors.push(t('configureHeaders.validation.transactionDateRequired'))
+  if (mappings.value.description.length === 0)
+    errors.push(t('configureHeaders.validation.descriptionRequired'))
+  if (mappings.value.amount.length === 0)
+    errors.push(t('configureHeaders.validation.amountRequired'))
   return errors
 })
 
@@ -266,7 +284,7 @@ const loadPresets = () => {
 
 const savePreset = () => {
   if (!newPresetName.value.trim()) {
-    alert('Podaj nazwę konfiguracji')
+    alert(t('errors.provideConfigName'))
     return
   }
 
@@ -299,7 +317,7 @@ const applyPreset = () => {
 const deletePreset = () => {
   if (!selectedPresetId.value) return
 
-  if (confirm('Czy na pewno chcesz usunąć tę konfigurację?')) {
+  if (confirm(t('confirm.deleteConfig'))) {
     presets.value = presets.value.filter((p) => p.id !== selectedPresetId.value)
     localStorage.setItem('columnMappingPresets', JSON.stringify(presets.value))
     selectedPresetId.value = ''
@@ -316,11 +334,11 @@ watch(selectedPresetId, () => {
 // Convert and continue
 const continueToCategizer = () => {
   if (!isValid.value) {
-    alert('Uzupełnij wymagane pola:\n' + validationErrors.value.join('\n'))
+    alert(t('errors.fillRequiredFields') + ':\n' + validationErrors.value.join('\n'))
     return
   }
 
-  // Build headers array
+  // Build headers array - use internal keys, not translated labels
   const headers = ['Data operacji', 'Data księgowania', 'Opis transakcji', 'Kwota']
 
   // Add extra columns (unmapped)

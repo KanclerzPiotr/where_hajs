@@ -3,12 +3,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+
 const router = useRouter()
+const { t, locale } = useI18n()
 
 const hasRecentProject = ref(false)
 const recentProject = ref(null)
 const csvFileInput = ref(null)
 const jsonFileInput = ref(null)
+const currentLocale = ref(localStorage.getItem('locale') || 'pl')
 
 onMounted(() => {
   // Check for recent project in localStorage
@@ -24,6 +28,11 @@ onMounted(() => {
   }
 })
 
+const switchLanguage = () => {
+  locale.value = currentLocale.value
+  localStorage.setItem('locale', currentLocale.value)
+}
+
 const handleOpenCSV = () => {
   csvFileInput.value?.click()
 }
@@ -34,13 +43,13 @@ const handleLoadProject = () => {
 
 const handleLoadRecent = async () => {
   if (!recentProject.value) {
-    alert('Brak zapisanego projektu')
+    alert(t('errors.noSavedProject'))
     return
   }
 
   try {
     if (!recentProject.value.filePath) {
-      alert('Nie można załadować projektu. Spróbuj otworzyć plik ręcznie.')
+      alert(t('errors.cannotLoadProject'))
       return
     }
 
@@ -57,7 +66,7 @@ const handleLoadRecent = async () => {
         }
       })
     } else {
-      alert('Nie można załadować projektu: ' + (result.error || 'Plik nie istnieje'))
+      alert(t('errors.cannotLoadProjectError') + ': ' + (result.error || t('errors.fileNotFound')))
       // Clear invalid recent project
       localStorage.removeItem('recentProject')
       hasRecentProject.value = false
@@ -65,7 +74,7 @@ const handleLoadRecent = async () => {
     }
   } catch (error) {
     console.error('Error loading recent project:', error)
-    alert('Błąd podczas ładowania projektu')
+    alert(t('errors.errorLoadingProject'))
   }
 }
 
@@ -232,7 +241,7 @@ const onCSVSelected = async (event) => {
     router.push({ name: 'configure-headers' })
   } catch (error) {
     console.error('Error loading CSV:', error)
-    alert('Nie udało się wczytać pliku CSV. Sprawdź, czy plik jest prawidłowy.')
+    alert(t('errors.failedToLoadCSV'))
   } finally {
     // Reset the file input
     event.target.value = ''
@@ -257,7 +266,7 @@ const onProjectSelected = async (event) => {
     })
   } catch (error) {
     console.error('Error loading project:', error)
-    alert('Nie udało się wczytać projektu. Sprawdź, czy plik jest prawidłowy.')
+    alert(t('errors.failedToLoadProject'))
   } finally {
     // Reset the file input
     event.target.value = ''

@@ -1,18 +1,18 @@
 <div class="w-full min-h-screen p-6 flex flex-col">
   <div class="mb-6 flex-shrink-0">
-    <h1 class="text-4xl font-bold mb-2">Kategoryzacja transakcji</h1>
-    <p class="text-lg opacity-70">Plik: {{ fileName }}</p>
+    <h1 class="text-4xl font-bold mb-2">{{ $t('categorizer.title') }}</h1>
+    <p class="text-lg opacity-70">{{ $t('app.file') }}: {{ fileName }}</p>
   </div>
 
   <div class="card bg-base-100 shadow-xl w-full flex flex-col" style="max-height: 60vh">
     <div class="card-body w-full flex flex-col p-6" style="max-height: 60vh; min-height: 0">
       <div class="flex items-center justify-between mb-4 flex-shrink-0">
-        <h2 class="card-title">Transakcje z pliku CSV</h2>
+        <h2 class="card-title">{{ $t('categorizer.transactionsFromCSV') }}</h2>
         <div class="flex items-center gap-4">
           <select v-model="selectedCategoryFilter" class="select select-bordered select-sm">
-            <option value="all">Wszystkie transakcje</option>
-            <option value="uncategorized">Nieskategoryzowane</option>
-            <optgroup v-if="categoryGroups.length > 0" label="Grupy">
+            <option value="all">{{ $t('categorizer.allTransactions') }}</option>
+            <option value="uncategorized">{{ $t('categorizer.uncategorized') }}</option>
+            <optgroup v-if="categoryGroups.length > 0" :label="$t('categorizer.groups')">
               <option
                 v-for="group in categoryGroups"
                 :key="'group:' + group.id"
@@ -21,7 +21,7 @@
                 {{ group.name }}
               </option>
             </optgroup>
-            <optgroup label="Kategorie">
+            <optgroup :label="$t('categorizer.categories')">
               <option v-for="category in categories" :key="category.id" :value="category.id">
                 {{ category.name }}
               </option>
@@ -29,16 +29,16 @@
           </select>
           <label class="label cursor-pointer gap-2" v-show="selectedCategoryFilter === 'all'">
             <input type="checkbox" v-model="hideCategorizedRecords" class="checkbox checkbox-sm" />
-            <span class="label-text">Ukryj skategoryzowane</span>
+            <span class="label-text">{{ $t('categorizer.hideCategorized') }}</span>
           </label>
           <div class="text-sm opacity-70">
-            Wyświetlono {{ displayedRecords.length }} / {{ records.length }}
+            {{ $t('categorizer.displayed') }} {{ displayedRecords.length }} / {{ records.length }}
           </div>
         </div>
       </div>
 
       <div v-if="records.length === 0" class="text-center py-8 flex-shrink-0">
-        <p class="text-lg opacity-70">Brak danych do wyświetlenia</p>
+        <p class="text-lg opacity-70">{{ $t('categorizer.noDataToDisplay') }}</p>
       </div>
 
       <div v-else class="overflow-auto flex-1 min-h-0">
@@ -46,7 +46,7 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Kategoria</th>
+              <th>{{ $t('categorizer.category') }}</th>
               <th v-for="(header, index) in headers" :key="index">{{ header }}</th>
             </tr>
           </thead>
@@ -117,7 +117,9 @@
             @click.stop
           >
             <div class="p-3">
-              <div class="text-sm font-semibold mb-2 opacity-70">Wybierz kategorię</div>
+              <div class="text-sm font-semibold mb-2 opacity-70">
+                {{ $t('categorizer.selectCategory') }}
+              </div>
               <div class="flex flex-col gap-1">
                 <button
                   v-for="category in categories"
@@ -129,7 +131,7 @@
                   <span class="text-left flex-1">{{ category.name }}</span>
                 </button>
                 <div v-if="categories.length === 0" class="text-center py-3 text-sm opacity-70">
-                  Brak kategorii
+                  {{ $t('categorizer.noCategories') }}
                 </div>
               </div>
             </div>
@@ -151,7 +153,7 @@
               clip-rule="evenodd"
             />
           </svg>
-          Wróć
+          {{ $t('app.back') }}
         </button>
         <!-- Hidden file input for import -->
         <input
@@ -175,7 +177,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Importuj więcej
+            {{ $t('categorizer.importMore') }}
           </button>
           <button class="btn btn-success" @click="saveProject">
             <svg
@@ -190,7 +192,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Zapisz sesję
+            {{ $t('categorizer.saveSession') }}
           </button>
           <button class="btn btn-primary" @click="displayData">
             <svg
@@ -206,7 +208,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Wyświetl
+            {{ $t('categorizer.display') }}
           </button>
         </div>
       </div>
@@ -217,7 +219,7 @@
   <div class="card bg-base-100 shadow-xl w-full mt-6 flex-shrink-0">
     <div class="card-body">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="card-title">Kategorie i grupy</h2>
+        <h2 class="card-title">{{ $t('categorizer.categoriesAndGroups') }}</h2>
         <button class="btn btn-primary btn-sm" @click="openCategoryManager">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -231,13 +233,15 @@
               clip-rule="evenodd"
             />
           </svg>
-          Zarządzaj kategoriami
+          {{ $t('categorizer.manageCategories') }}
         </button>
       </div>
 
       <!-- Category Groups -->
       <div v-if="categoryGroups.length > 0" class="mb-4">
-        <h3 class="text-sm font-semibold mb-2 opacity-70">Grupy kategorii</h3>
+        <h3 class="text-sm font-semibold mb-2 opacity-70">
+          {{ $t('categorizer.categoryGroups') }}
+        </h3>
         <div class="flex flex-wrap gap-3">
           <div
             v-for="group in categoryGroups"
@@ -253,7 +257,7 @@
                 class="badge badge-sm"
                 :style="{ backgroundColor: categories.find(c => c.id === catId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === catId)?.color || '#666') }"
               >
-                {{ categories.find(c => c.id === catId)?.name || 'Nieznana' }}
+                {{ categories.find(c => c.id === catId)?.name || $t('app.unknown') }}
               </div>
             </div>
           </div>
@@ -265,11 +269,11 @@
         v-if="categories.length === 0 && categoryGroups.length === 0"
         class="text-center py-4 opacity-70"
       >
-        <p>Brak kategorii. Kliknij przycisk "Zarządzaj kategoriami" aby dodać nowe.</p>
+        <p>{{ $t('categorizer.noCategoriesYet') }}</p>
       </div>
 
       <div v-else-if="categories.length > 0">
-        <h3 class="text-sm font-semibold mb-2 opacity-70">Wszystkie kategorie</h3>
+        <h3 class="text-sm font-semibold mb-2 opacity-70">{{ $t('categorizer.allCategories') }}</h3>
         <div class="flex flex-wrap gap-2">
           <div
             v-for="category in categories"
@@ -287,19 +291,19 @@
   <!-- Category Manager Modal -->
   <dialog ref="categoryModal" class="modal" style="z-index: 9999">
     <div class="modal-box max-w-2xl" style="z-index: 10000">
-      <h3 class="font-bold text-lg mb-4">Zarządzanie kategoriami</h3>
+      <h3 class="font-bold text-lg mb-4">{{ $t('categorizer.categoryManager.title') }}</h3>
 
       <!-- Add New Category Form -->
       <div class="form-control mb-6">
         <label class="label">
-          <span class="label-text">Dodaj nową kategorię</span>
+          <span class="label-text">{{ $t('categorizer.categoryManager.addNewCategory') }}</span>
         </label>
         <div class="flex flex-col gap-3">
           <div class="flex gap-2">
             <input
               v-model="newCategoryName"
               type="text"
-              placeholder="Nazwa kategorii (np. Biedronka)"
+              :placeholder="$t('categorizer.categoryManager.categoryNamePlaceholder')"
               class="input input-bordered flex-1"
             />
             <input
@@ -311,7 +315,7 @@
               type="button"
               class="btn btn-square"
               @click="newCategoryColor = generateRandomColor()"
-              title="Losuj kolor"
+              :title="$t('categorizer.categoryManager.randomColor')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -331,7 +335,7 @@
             <input
               v-model="newCategoryFilter"
               type="text"
-              placeholder="Filtr (np. BIEDRONKA) - opcjonalnie"
+              :placeholder="$t('categorizer.categoryManager.filterPlaceholder')"
               class="input input-bordered flex-1"
             />
             <button class="btn btn-primary" @click="addCategory">
@@ -347,18 +351,18 @@
                   clip-rule="evenodd"
                 />
               </svg>
-              Dodaj
+              {{ $t('app.add') }}
             </button>
           </div>
           <div class="text-sm opacity-70">
-            <strong>Filtr:</strong> Słowo kluczowe do automatycznego przypisywania kategorii (np.
-            "BIEDRONKA" znajdzie wszystkie transakcje z tym słowem w opisie)
+            <strong>{{ $t('categorizer.categoryManager.filter') }}:</strong> {{
+            $t('categorizer.categoryManager.filterHelp') }}
           </div>
         </div>
       </div>
 
       <!-- Existing Categories List -->
-      <div class="divider">Istniejące kategorie</div>
+      <div class="divider">{{ $t('categorizer.categoryManager.existingCategories') }}</div>
       <div class="space-y-2 max-h-64 overflow-y-auto">
         <div
           v-for="category in categories"
@@ -378,7 +382,7 @@
               </span>
             </div>
             <div v-if="category.filter" class="text-xs opacity-70 ml-11">
-              Filtr:
+              {{ $t('categorizer.categoryManager.filter') }}:
               <span class="font-mono bg-base-300 px-2 py-1 rounded">{{ category.filter }}</span>
             </div>
           </div>
@@ -395,25 +399,28 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Usuń
+            {{ $t('app.delete') }}
           </button>
         </div>
       </div>
 
       <!-- Category Groups Section -->
-      <div class="divider">Grupy kategorii</div>
+      <div class="divider">{{ $t('categorizer.categoryManager.categoryGroupsSection') }}</div>
 
       <!-- Add/Edit Group Form -->
       <div class="form-control mb-4">
         <label class="label">
-          <span class="label-text">{{ editingGroup ? 'Edytuj grupę' : 'Dodaj nową grupę' }}</span>
+          <span class="label-text"
+            >{{ editingGroup ? $t('categorizer.categoryManager.editGroup') :
+            $t('categorizer.categoryManager.addNewGroup') }}</span
+          >
         </label>
         <div class="flex flex-col gap-3">
           <div class="flex gap-2">
             <input
               v-model="newGroupName"
               type="text"
-              placeholder="Nazwa grupy (np. Jedzenie)"
+              :placeholder="$t('categorizer.categoryManager.groupNamePlaceholder')"
               class="input input-bordered flex-1"
             />
             <input v-model="newGroupColor" type="color" class="w-16 h-12 rounded cursor-pointer" />
@@ -421,7 +428,7 @@
               type="button"
               class="btn btn-square"
               @click="newGroupColor = generateRandomColor()"
-              title="Losuj kolor"
+              :title="$t('categorizer.categoryManager.randomColor')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -440,7 +447,9 @@
 
           <!-- Category Selection for Group -->
           <div v-if="categories.length > 0" class="bg-base-200 p-3 rounded-lg">
-            <div class="text-sm mb-2 opacity-70">Wybierz kategorie dla grupy:</div>
+            <div class="text-sm mb-2 opacity-70">
+              {{ $t('categorizer.categoryManager.selectCategoriesForGroup') }}
+            </div>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="category in categories"
@@ -469,12 +478,12 @@
             </div>
           </div>
           <div v-else class="text-sm opacity-70 text-center py-2">
-            Najpierw dodaj kategorie, aby móc je grupować
+            {{ $t('categorizer.categoryManager.addCategoriesFirst') }}
           </div>
 
           <div class="flex gap-2 justify-end">
             <button v-if="editingGroup" class="btn btn-ghost" @click="cancelEditGroup">
-              Anuluj
+              {{ $t('app.cancel') }}
             </button>
             <button
               v-if="editingGroup"
@@ -482,7 +491,7 @@
               @click="updateCategoryGroup"
               :disabled="!newGroupName.trim() || selectedGroupCategories.length === 0"
             >
-              Zapisz zmiany
+              {{ $t('categorizer.categoryManager.saveChanges') }}
             </button>
             <button
               v-else
@@ -502,7 +511,7 @@
                   clip-rule="evenodd"
                 />
               </svg>
-              Dodaj grupę
+              {{ $t('categorizer.categoryManager.addGroup') }}
             </button>
           </div>
         </div>
@@ -543,7 +552,7 @@
                 class="badge badge-sm"
                 :style="{ backgroundColor: categories.find(c => c.id === catId)?.color || '#666', color: getContrastColor(categories.find(c => c.id === catId)?.color || '#666') }"
               >
-                {{ categories.find(c => c.id === catId)?.name || 'Nieznana' }}
+                {{ categories.find(c => c.id === catId)?.name || $t('app.unknown') }}
               </span>
             </div>
           </div>
@@ -581,7 +590,7 @@
         </div>
       </div>
       <div v-else class="text-center py-4 opacity-70 text-sm">
-        Brak grup kategorii. Utwórz grupę, aby łatwiej filtrować powiązane kategorie.
+        {{ $t('categorizer.categoryManager.noCategoryGroups') }}
       </div>
 
       <div class="modal-action justify-between">
@@ -598,9 +607,9 @@
               clip-rule="evenodd"
             />
           </svg>
-          Zastosuj filtry
+          {{ $t('categorizer.categoryManager.applyFilters') }}
         </button>
-        <button class="btn" @click="closeCategoryManager">Zamknij</button>
+        <button class="btn" @click="closeCategoryManager">{{ $t('app.close') }}</button>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -611,34 +620,36 @@
   <!-- Merge Preview Modal -->
   <dialog :class="['modal', showMergeModal ? 'modal-open' : '']">
     <div class="modal-box max-w-4xl">
-      <h3 class="font-bold text-lg mb-4">Podgląd importu</h3>
+      <h3 class="font-bold text-lg mb-4">{{ $t('categorizer.mergePreview.title') }}</h3>
 
       <!-- Summary -->
       <div class="stats shadow mb-4 w-full">
         <div class="stat">
-          <div class="stat-title">Nowe transakcje</div>
+          <div class="stat-title">{{ $t('categorizer.mergePreview.newTransactions') }}</div>
           <div class="stat-value text-success">{{ mergePreview.newRecords.length }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">Duplikaty</div>
+          <div class="stat-title">{{ $t('categorizer.mergePreview.duplicates') }}</div>
           <div class="stat-value text-warning">{{ mergePreview.duplicates.length }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">Do zaimportowania</div>
+          <div class="stat-title">{{ $t('categorizer.mergePreview.toImport') }}</div>
           <div class="stat-value text-primary">{{ mergePreview.toImport.length }}</div>
         </div>
       </div>
 
       <!-- New Records Preview -->
       <div v-if="mergePreview.newRecords.length > 0" class="mb-4">
-        <h4 class="font-semibold mb-2 text-success">Nowe transakcje (zostaną dodane):</h4>
+        <h4 class="font-semibold mb-2 text-success">
+          {{ $t('categorizer.mergePreview.newWillBeAdded') }}
+        </h4>
         <div class="overflow-x-auto max-h-48 border rounded-lg">
           <table class="table table-xs table-zebra">
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Opis</th>
-                <th>Kwota</th>
+                <th>{{ $t('configureHeaders.transactionDate') }}</th>
+                <th>{{ $t('configureHeaders.description') }}</th>
+                <th>{{ $t('configureHeaders.amount') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -649,7 +660,7 @@
               </tr>
               <tr v-if="mergePreview.newRecords.length > 20">
                 <td colspan="3" class="text-center opacity-70">
-                  ... i {{ mergePreview.newRecords.length - 20 }} więcej
+                  ... {{ mergePreview.newRecords.length - 20 }} more
                 </td>
               </tr>
             </tbody>
@@ -660,16 +671,16 @@
       <!-- Duplicates Preview -->
       <div v-if="mergePreview.duplicates.length > 0" class="mb-4">
         <h4 class="font-semibold mb-2 text-warning">
-          Duplikaty (kliknij aby dodać mimo wszystko):
+          {{ $t('categorizer.mergePreview.duplicatesClickToAdd') }}
         </h4>
         <div class="overflow-x-auto max-h-48 border rounded-lg">
           <table class="table table-xs">
             <thead>
               <tr>
-                <th>Dodaj?</th>
-                <th>Data</th>
-                <th>Opis</th>
-                <th>Kwota</th>
+                <th>{{ $t('app.add') }}?</th>
+                <th>{{ $t('configureHeaders.transactionDate') }}</th>
+                <th>{{ $t('configureHeaders.description') }}</th>
+                <th>{{ $t('configureHeaders.amount') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -695,14 +706,14 @@
               </tr>
               <tr v-if="mergePreview.duplicates.length > 20">
                 <td colspan="4" class="text-center opacity-70">
-                  ... i {{ mergePreview.duplicates.length - 20 }} więcej
+                  ... {{ mergePreview.duplicates.length - 20 }} more
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <p class="text-xs opacity-70 mt-1">
-          Duplikaty wykrywane na podstawie: data + kwota + opis (pierwsze 50 znaków)
+          {{ $t('categorizer.mergePreview.duplicateDetection') }}
         </p>
       </div>
 
@@ -710,17 +721,17 @@
         v-if="mergePreview.newRecords.length === 0 && mergePreview.duplicates.length === 0"
         class="text-center py-8 opacity-70"
       >
-        Brak transakcji do zaimportowania.
+        {{ $t('categorizer.mergePreview.noTransactionsToImport') }}
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-ghost" @click="closeMergeModal">Anuluj</button>
+        <button class="btn btn-ghost" @click="closeMergeModal">{{ $t('app.cancel') }}</button>
         <button
           class="btn btn-primary"
           @click="confirmMerge"
           :disabled="mergePreview.toImport.length === 0"
         >
-          Importuj {{ mergePreview.toImport.length }} transakcji
+          {{ $t('categorizer.mergePreview.importCount', { count: mergePreview.toImport.length }) }}
         </button>
       </div>
     </div>

@@ -3,8 +3,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 
 // Get App.vue's registration functions
 const registerProjectData = inject('registerProjectData', null)
@@ -120,7 +122,7 @@ onMounted(() => {
 
   // Load project data (JSON format)
   projectData.value = state.projectData
-  fileName.value = state.fileName || projectData.value.fileName || 'Nieznany plik'
+  fileName.value = state.fileName || projectData.value.fileName || t('app.unknownFile')
   headers.value = projectData.value.headers || []
 
   // Convert transactions to records format for table display
@@ -187,7 +189,7 @@ const parseCSV = (csvText) => {
     records.value = lines.slice(1).map((line) => parseCSVLine(line))
   } catch (error) {
     console.error('Error parsing CSV:', error)
-    alert('Błąd podczas parsowania pliku CSV')
+    alert(t('errors.failedToLoadCSV'))
   }
 }
 
@@ -219,7 +221,7 @@ const goBack = () => {
 
 const saveProject = async () => {
   if (!projectData.value) {
-    alert('Brak danych projektu do zapisania')
+    alert(t('errors.noProjectData'))
     return
   }
 
@@ -238,7 +240,7 @@ const saveProject = async () => {
     }
 
     if (!result.success) {
-      alert('Nie udało się zapisać pliku: ' + (result.error || 'Nieznany błąd'))
+      alert(t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')))
       return
     }
 
@@ -256,16 +258,16 @@ const saveProject = async () => {
       markAsSaved(savedTime)
     }
 
-    alert('Projekt został zapisany pomyślnie!')
+    alert(t('success.projectSaved'))
   } catch (error) {
     console.error('Error saving project:', error)
-    alert('Błąd podczas zapisywania projektu')
+    alert(t('errors.errorSaving'))
   }
 }
 
 const displayData = () => {
   if (!projectData.value) {
-    alert('Brak danych projektu')
+    alert(t('errors.noProjectData'))
     return
   }
 
@@ -304,7 +306,7 @@ const closeCategoryManager = () => {
 
 const addCategory = () => {
   if (!newCategoryName.value.trim()) {
-    alert('Podaj nazwę kategorii')
+    alert(t('errors.provideCategoryName'))
     return
   }
 
@@ -324,7 +326,7 @@ const addCategory = () => {
 }
 
 const deleteCategory = (categoryId) => {
-  if (confirm('Czy na pewno chcesz usunąć tę kategorię?')) {
+  if (confirm(t('confirm.deleteCategory'))) {
     categories.value = categories.value.filter((cat) => cat.id !== categoryId)
     // Also remove from any groups
     categoryGroups.value.forEach((group) => {
@@ -345,12 +347,12 @@ const saveCategoryGroups = () => {
 
 const addCategoryGroup = () => {
   if (!newGroupName.value.trim()) {
-    alert('Podaj nazwę grupy')
+    alert(t('errors.provideGroupName'))
     return
   }
 
   if (selectedGroupCategories.value.length === 0) {
-    alert('Wybierz przynajmniej jedną kategorię dla grupy')
+    alert(t('errors.selectAtLeastOneCategory'))
     return
   }
 
@@ -399,7 +401,7 @@ const cancelEditGroup = () => {
 }
 
 const deleteCategoryGroup = (groupId) => {
-  if (confirm('Czy na pewno chcesz usunąć tę grupę?')) {
+  if (confirm(t('confirm.deleteGroup'))) {
     categoryGroups.value = categoryGroups.value.filter((g) => g.id !== groupId)
     saveCategoryGroups()
   }
@@ -456,7 +458,7 @@ const getContrastColor = (hexColor) => {
 
 const applyCategoryFilters = () => {
   if (!projectData.value || !projectData.value.transactions) {
-    alert('Brak danych transakcji')
+    alert(t('errors.noTransactionData'))
     return
   }
 
@@ -472,7 +474,7 @@ const applyCategoryFilters = () => {
   }
 
   if (!descField) {
-    alert('Nie znaleziono pola z opisem transakcji')
+    alert(t('errors.descriptionFieldNotFound'))
     return
   }
 
@@ -500,7 +502,7 @@ const applyCategoryFilters = () => {
   // Update project data
   projectData.value.lastModified = new Date().toISOString()
 
-  alert(`Automatycznie skategoryzowano ${matchCount} transakcji`)
+  alert(t('categorizer.categoryManager.autoCategorized', { count: matchCount }))
 
   // Refresh records display
   records.value = projectData.value.transactions.map((transaction) => {
@@ -659,7 +661,7 @@ const onImportFileSelected = async (event) => {
     router.push({ name: 'configure-headers' })
   } catch (error) {
     console.error('Error loading import file:', error)
-    alert('Nie udało się wczytać pliku.')
+    alert(t('errors.failedToLoadFile'))
   } finally {
     event.target.value = ''
   }
@@ -730,7 +732,7 @@ const confirmMerge = () => {
     return headers.value.map((header) => transaction[header] || '')
   })
 
-  const msg = `Zaimportowano ${toImport.length} transakcji.`
+  const msg = t('categorizer.mergePreview.imported', { count: toImport.length })
   alert(msg)
 
   closeMergeModal()
