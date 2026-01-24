@@ -6,7 +6,11 @@ const api = {
   saveProjectFile: (jsonData) => ipcRenderer.invoke('save-project-file', jsonData),
   readProjectFile: (filePath) => ipcRenderer.invoke('read-project-file', filePath),
   onCheckUnsavedChanges: (callback) => ipcRenderer.on('check-unsaved-changes', callback),
-  sendCloseResponse: (canClose) => ipcRenderer.send('close-response', canClose)
+  sendCloseResponse: (canClose) => ipcRenderer.send('close-response', canClose),
+  focusWindow: () => ipcRenderer.send('focus-window'),
+  // Dialog APIs - returns { response: number, checkboxChecked: boolean }
+  // response is the index of the clicked button
+  showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

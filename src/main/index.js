@@ -61,6 +61,18 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Focus window - helps with Electron focus issues on Windows
+  ipcMain.on('focus-window', () => {
+    if (mainWindow) {
+      mainWindow.focus()
+    }
+  })
+
+  // Dialog APIs
+  ipcMain.handle('show-message-box', async (event, options) => {
+    return dialog.showMessageBox(mainWindow, options)
+  })
+
   // Handle close confirmation response from renderer
   ipcMain.on('close-response', (event, canClose) => {
     if (canClose && mainWindow) {

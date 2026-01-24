@@ -8,6 +8,16 @@ import { useI18n } from 'vue-i18n'
 const router = useRouter()
 const { t, locale } = useI18n()
 
+// Dialog helper functions
+const showAlert = async (message, type = 'info') => {
+  await window.api.showMessageBox({
+    type,
+    title: type === 'error' ? t('app.error') : t('app.info'),
+    message,
+    buttons: ['OK']
+  })
+}
+
 const hasRecentProject = ref(false)
 const recentProject = ref(null)
 const csvFileInput = ref(null)
@@ -43,13 +53,13 @@ const handleLoadProject = () => {
 
 const handleLoadRecent = async () => {
   if (!recentProject.value) {
-    alert(t('errors.noSavedProject'))
+    showAlert(t('errors.noSavedProject'), 'error')
     return
   }
 
   try {
     if (!recentProject.value.filePath) {
-      alert(t('errors.cannotLoadProject'))
+      showAlert(t('errors.cannotLoadProject'), 'error')
       return
     }
 
@@ -58,15 +68,21 @@ const handleLoadRecent = async () => {
     if (result.success) {
       const projectData = JSON.parse(result.data)
 
-      router.push({
-        name: 'Categorizer',
-        state: {
+      // Store data in sessionStorage to avoid history.state cloning issues
+      sessionStorage.setItem(
+        'categorizerData',
+        JSON.stringify({
           projectData: projectData,
           fileName: recentProject.value.name
-        }
-      })
+        })
+      )
+
+      router.push({ name: 'Categorizer' })
     } else {
-      alert(t('errors.cannotLoadProjectError') + ': ' + (result.error || t('errors.fileNotFound')))
+      showAlert(
+        t('errors.cannotLoadProjectError') + ': ' + (result.error || t('errors.fileNotFound')),
+        'error'
+      )
       // Clear invalid recent project
       localStorage.removeItem('recentProject')
       hasRecentProject.value = false
@@ -74,7 +90,7 @@ const handleLoadRecent = async () => {
     }
   } catch (error) {
     console.error('Error loading recent project:', error)
-    alert(t('errors.errorLoadingProject'))
+    showAlert(t('errors.errorLoadingProject'), 'error')
   }
 }
 
@@ -241,7 +257,7 @@ const onCSVSelected = async (event) => {
     router.push({ name: 'configure-headers' })
   } catch (error) {
     console.error('Error loading CSV:', error)
-    alert(t('errors.failedToLoadCSV'))
+    showAlert(t('errors.failedToLoadCSV'), 'error')
   } finally {
     // Reset the file input
     event.target.value = ''
@@ -256,17 +272,20 @@ const onProjectSelected = async (event) => {
     const text = await file.text()
     const projectData = JSON.parse(text)
 
-    // Navigate to the Categorizer view with the loaded project data
-    router.push({
-      name: 'Categorizer',
-      state: {
+    // Store data in sessionStorage to avoid history.state cloning issues
+    sessionStorage.setItem(
+      'categorizerData',
+      JSON.stringify({
         projectData,
         fileName: file.name
-      }
-    })
+      })
+    )
+
+    // Navigate to the Categorizer view
+    router.push({ name: 'Categorizer' })
   } catch (error) {
     console.error('Error loading project:', error)
-    alert(t('errors.failedToLoadProject'))
+    showAlert(t('errors.failedToLoadProject'), 'error')
   } finally {
     // Reset the file input
     event.target.value = ''

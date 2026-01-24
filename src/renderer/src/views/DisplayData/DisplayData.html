@@ -46,8 +46,25 @@
       </div>
       <div class="stats shadow">
         <div class="stat">
+          <div class="stat-title">{{ $t('displayData.totalIncome') }}</div>
+          <div class="stat-value text-success">{{ totalIncome }} zł</div>
+        </div>
+      </div>
+      <div class="stats shadow">
+        <div class="stat">
           <div class="stat-title">{{ $t('displayData.totalSpent') }}</div>
           <div class="stat-value text-error">{{ totalSpent }} zł</div>
+        </div>
+      </div>
+      <div class="stats shadow">
+        <div class="stat">
+          <div class="stat-title">{{ $t('displayData.balance') }}</div>
+          <div
+            class="stat-value"
+            :class="parseFloat(totalBalance) >= 0 ? 'text-success' : 'text-error'"
+          >
+            {{ totalBalance }} zł
+          </div>
         </div>
       </div>
     </div>

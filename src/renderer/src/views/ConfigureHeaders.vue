@@ -47,9 +47,14 @@ const goBack = () => {
   router.push('/')
 }
 
-const convertToJSON = () => {
+const convertToJSON = async () => {
   // TODO: Implement CSV to JSON conversion
-  alert('CSV to JSON conversion coming soon!')
+  await window.api.showMessageBox({
+    type: 'info',
+    title: 'Info',
+    message: 'CSV to JSON conversion coming soon!',
+    buttons: ['OK']
+  })
   router.push({ name: 'transactions' })
 }
 </script>

@@ -22,7 +22,10 @@
     "unknown": "Nieznany",
     "unknownFile": "Nieznany plik",
     "noData": "Brak danych",
-    "file": "Plik"
+    "file": "Plik",
+    "error": "Błąd",
+    "info": "Informacja",
+    "confirm": "Potwierdź"
   },
   "errors": {
     "failedToSaveFile": "Nie udało się zapisać pliku",
@@ -155,6 +158,8 @@
     "categorized": "Skategoryzowane",
     "uncategorized": "Bez kategorii",
     "totalSpent": "Suma wydatków",
+    "totalIncome": "Suma przychodów",
+    "balance": "Bilans",
     "period": "Okres",
     "month": "Miesiąc...",
     "categories": "Kategorie",

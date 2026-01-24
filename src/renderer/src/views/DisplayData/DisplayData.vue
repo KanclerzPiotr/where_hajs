@@ -622,9 +622,39 @@ const totalSpent = computed(() => {
   // Explicitly depend on filteredTransactions for reactivity
   const _ = filteredTransactions.value.length
 
-  const total = categories.value.reduce((sum, category) => {
-    return sum + Math.abs(parseFloat(getCategoryTotal(category.id)))
+  // Sum only negative amounts (expenses)
+  const total = filteredTransactions.value.reduce((sum, transaction) => {
+    const amount = parseFloat(
+      getTransactionAmount(transaction)
+        .toString()
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '')
+    )
+    // Only count negative amounts (expenses)
+    return sum + (isNaN(amount) || amount >= 0 ? 0 : Math.abs(amount))
   }, 0)
   return total.toFixed(2)
+})
+
+const totalIncome = computed(() => {
+  // Explicitly depend on filteredTransactions for reactivity
+  const _ = filteredTransactions.value.length
+
+  // Sum only positive amounts (incomes)
+  const total = filteredTransactions.value.reduce((sum, transaction) => {
+    const amount = parseFloat(
+      getTransactionAmount(transaction)
+        .toString()
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '')
+    )
+    // Only count positive amounts (incomes)
+    return sum + (isNaN(amount) || amount <= 0 ? 0 : amount)
+  }, 0)
+  return total.toFixed(2)
+})
+
+const totalBalance = computed(() => {
+  return (parseFloat(totalIncome.value) - parseFloat(totalSpent.value)).toFixed(2)
 })
 </script>

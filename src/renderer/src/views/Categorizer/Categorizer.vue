@@ -8,6 +8,28 @@ import { useI18n } from 'vue-i18n'
 const router = useRouter()
 const { t } = useI18n()
 
+// Dialog helper functions
+const showAlert = async (message, type = 'info') => {
+  await window.api.showMessageBox({
+    type,
+    title: type === 'error' ? t('app.error') : t('app.info'),
+    message,
+    buttons: ['OK']
+  })
+}
+
+const showConfirm = async (message) => {
+  const result = await window.api.showMessageBox({
+    type: 'question',
+    title: t('app.confirm'),
+    message,
+    buttons: [t('app.yes'), t('app.no')],
+    defaultId: 1,
+    cancelId: 1
+  })
+  return result.response === 0
+}
+
 // Get App.vue's registration functions
 const registerProjectData = inject('registerProjectData', null)
 const markAsSaved = inject('markAsSaved', null)
@@ -16,7 +38,8 @@ const headers = ref([])
 const records = ref([])
 const categories = ref([])
 const categoryGroups = ref([])
-const categoryModal = ref(null)
+const isCategoryModalOpen = ref(false)
+const categoryNameInput = ref(null)
 const newCategoryName = ref('')
 const newCategoryColor = ref('#3b82f6')
 const newCategoryFilter = ref('')
@@ -90,21 +113,17 @@ const displayedRecords = computed(() => {
 })
 
 onMounted(() => {
-  let state = history.state
+  let state = null
 
-  console.log('[Categorizer] onMounted - history.state:', state)
-
-  // Try sessionStorage if history.state doesn't have projectData (e.g., coming back from DisplayData)
-  if (!state?.projectData) {
-    const sessionData = sessionStorage.getItem('categorizerData')
-    if (sessionData) {
-      try {
-        state = JSON.parse(sessionData)
-        sessionStorage.removeItem('categorizerData') // Clean up after reading
-        console.log('[Categorizer] Loaded data from sessionStorage')
-      } catch (e) {
-        console.error('[Categorizer] Error parsing sessionStorage data:', e)
-      }
+  // Load data from sessionStorage (preferred method to avoid history.state cloning issues)
+  const sessionData = sessionStorage.getItem('categorizerData')
+  if (sessionData) {
+    try {
+      state = JSON.parse(sessionData)
+      sessionStorage.removeItem('categorizerData') // Clean up after reading
+      console.log('[Categorizer] Loaded data from sessionStorage')
+    } catch (e) {
+      console.error('[Categorizer] Error parsing sessionStorage data:', e)
     }
   }
 
@@ -143,6 +162,12 @@ onMounted(() => {
   if (!projectData.value.categoryGroups) {
     projectData.value.categoryGroups = []
   }
+  if (!projectData.value.settings) {
+    projectData.value.settings = {}
+  }
+
+  // Load settings from project data
+  hideCategorizedRecords.value = projectData.value.settings.hideCategorizedRecords || false
 
   // Update project data filename
   projectData.value.fileName = fileName.value
@@ -167,6 +192,17 @@ watch(
   { deep: true }
 )
 
+// Watch for hideCategorizedRecords changes and save to project settings
+watch(hideCategorizedRecords, (newValue) => {
+  if (projectData.value) {
+    if (!projectData.value.settings) {
+      projectData.value.settings = {}
+    }
+    projectData.value.settings.hideCategorizedRecords = newValue
+    projectData.value.lastModified = new Date().toISOString()
+  }
+})
+
 // Cleanup on unmount
 onUnmounted(() => {
   if (registerProjectData) {
@@ -189,7 +225,7 @@ const parseCSV = (csvText) => {
     records.value = lines.slice(1).map((line) => parseCSVLine(line))
   } catch (error) {
     console.error('Error parsing CSV:', error)
-    alert(t('errors.failedToLoadCSV'))
+    showAlert(t('errors.failedToLoadCSV'), 'error')
   }
 }
 
@@ -221,7 +257,7 @@ const goBack = () => {
 
 const saveProject = async () => {
   if (!projectData.value) {
-    alert(t('errors.noProjectData'))
+    showAlert(t('errors.noProjectData'), 'error')
     return
   }
 
@@ -240,7 +276,10 @@ const saveProject = async () => {
     }
 
     if (!result.success) {
-      alert(t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')))
+      showAlert(
+        t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')),
+        'error'
+      )
       return
     }
 
@@ -258,16 +297,16 @@ const saveProject = async () => {
       markAsSaved(savedTime)
     }
 
-    alert(t('success.projectSaved'))
+    showAlert(t('success.projectSaved'))
   } catch (error) {
     console.error('Error saving project:', error)
-    alert(t('errors.errorSaving'))
+    showAlert(t('errors.errorSaving'), 'error')
   }
 }
 
 const displayData = () => {
   if (!projectData.value) {
-    alert(t('errors.noProjectData'))
+    showAlert(t('errors.noProjectData'), 'error')
     return
   }
 
@@ -294,19 +333,24 @@ const saveCategories = () => {
 const openCategoryManager = () => {
   // Close category selector if open
   closeCategorySelector()
-  categoryModal.value?.showModal()
+  isCategoryModalOpen.value = true
+  // Focus window first (fixes Electron focus issues on Windows), then focus input
+  window.api?.focusWindow()
+  setTimeout(() => {
+    categoryNameInput.value?.focus()
+  }, 100)
 }
 
 const closeCategoryManager = () => {
-  categoryModal.value?.close()
+  isCategoryModalOpen.value = false
   newCategoryName.value = ''
   newCategoryColor.value = '#3b82f6'
   newCategoryFilter.value = ''
 }
 
-const addCategory = () => {
+const addCategory = async () => {
   if (!newCategoryName.value.trim()) {
-    alert(t('errors.provideCategoryName'))
+    await showAlert(t('errors.provideCategoryName'), 'error')
     return
   }
 
@@ -325,8 +369,8 @@ const addCategory = () => {
   newCategoryFilter.value = ''
 }
 
-const deleteCategory = (categoryId) => {
-  if (confirm(t('confirm.deleteCategory'))) {
+const deleteCategory = async (categoryId) => {
+  if (await showConfirm(t('confirm.deleteCategory'))) {
     categories.value = categories.value.filter((cat) => cat.id !== categoryId)
     // Also remove from any groups
     categoryGroups.value.forEach((group) => {
@@ -345,14 +389,14 @@ const saveCategoryGroups = () => {
   }
 }
 
-const addCategoryGroup = () => {
+const addCategoryGroup = async () => {
   if (!newGroupName.value.trim()) {
-    alert(t('errors.provideGroupName'))
+    await showAlert(t('errors.provideGroupName'), 'error')
     return
   }
 
   if (selectedGroupCategories.value.length === 0) {
-    alert(t('errors.selectAtLeastOneCategory'))
+    await showAlert(t('errors.selectAtLeastOneCategory'), 'error')
     return
   }
 
@@ -400,8 +444,8 @@ const cancelEditGroup = () => {
   selectedGroupCategories.value = []
 }
 
-const deleteCategoryGroup = (groupId) => {
-  if (confirm(t('confirm.deleteGroup'))) {
+const deleteCategoryGroup = async (groupId) => {
+  if (await showConfirm(t('confirm.deleteGroup'))) {
     categoryGroups.value = categoryGroups.value.filter((g) => g.id !== groupId)
     saveCategoryGroups()
   }
@@ -456,9 +500,9 @@ const getContrastColor = (hexColor) => {
   return luminance > 0.5 ? '#000000' : '#ffffff'
 }
 
-const applyCategoryFilters = () => {
+const applyCategoryFilters = async () => {
   if (!projectData.value || !projectData.value.transactions) {
-    alert(t('errors.noTransactionData'))
+    await showAlert(t('errors.noTransactionData'), 'error')
     return
   }
 
@@ -474,7 +518,7 @@ const applyCategoryFilters = () => {
   }
 
   if (!descField) {
-    alert(t('errors.descriptionFieldNotFound'))
+    await showAlert(t('errors.descriptionFieldNotFound'), 'error')
     return
   }
 
@@ -502,7 +546,7 @@ const applyCategoryFilters = () => {
   // Update project data
   projectData.value.lastModified = new Date().toISOString()
 
-  alert(t('categorizer.categoryManager.autoCategorized', { count: matchCount }))
+  await showAlert(t('categorizer.categoryManager.autoCategorized', { count: matchCount }))
 
   // Refresh records display
   records.value = projectData.value.transactions.map((transaction) => {
@@ -661,7 +705,7 @@ const onImportFileSelected = async (event) => {
     router.push({ name: 'configure-headers' })
   } catch (error) {
     console.error('Error loading import file:', error)
-    alert(t('errors.failedToLoadFile'))
+    showAlert(t('errors.failedToLoadFile'), 'error')
   } finally {
     event.target.value = ''
   }
@@ -733,7 +777,7 @@ const confirmMerge = () => {
   })
 
   const msg = t('categorizer.mergePreview.imported', { count: toImport.length })
-  alert(msg)
+  showAlert(msg)
 
   closeMergeModal()
 }

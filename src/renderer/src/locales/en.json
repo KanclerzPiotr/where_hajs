@@ -22,7 +22,10 @@
     "unknown": "Unknown",
     "unknownFile": "Unknown file",
     "noData": "No data",
-    "file": "File"
+    "file": "File",
+    "error": "Error",
+    "info": "Information",
+    "confirm": "Confirm"
   },
   "errors": {
     "failedToSaveFile": "Failed to save file",
@@ -155,6 +158,8 @@
     "categorized": "Categorized",
     "uncategorized": "Uncategorized",
     "totalSpent": "Total spent",
+    "totalIncome": "Total income",
+    "balance": "Balance",
     "period": "Period",
     "month": "Month...",
     "categories": "Categories",

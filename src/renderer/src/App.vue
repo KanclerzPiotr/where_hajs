@@ -26,6 +26,16 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
+// Dialog helper function
+const showAlert = async (message, type = 'info') => {
+  await window.api.showMessageBox({
+    type,
+    title: type === 'error' ? t('app.error') : t('app.info'),
+    message,
+    buttons: ['OK']
+  })
+}
+
 const closeModal = ref(null)
 const projectDataRef = ref(null)
 const lastSavedTime = ref(null)
@@ -88,7 +98,10 @@ const handleCloseSave = async () => {
       }
 
       if (!result.success) {
-        alert(t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')))
+        showAlert(
+          t('errors.failedToSaveFile') + ': ' + (result.error || t('errors.unknownError')),
+          'error'
+        )
         closeModal.value?.close()
         window.api?.sendCloseResponse(false)
         return
@@ -103,7 +116,7 @@ const handleCloseSave = async () => {
       localStorage.setItem('recentProject', JSON.stringify(recentProject))
     } catch (error) {
       console.error('Error saving on close:', error)
-      alert(t('errors.errorSaving'))
+      showAlert(t('errors.errorSaving'), 'error')
       closeModal.value?.close()
       window.api?.sendCloseResponse(false)
       return

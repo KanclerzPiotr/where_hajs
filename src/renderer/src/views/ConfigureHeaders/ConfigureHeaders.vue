@@ -8,6 +8,28 @@ import { useI18n } from 'vue-i18n'
 const router = useRouter()
 const { t } = useI18n()
 
+// Dialog helper functions
+const showAlert = async (message, type = 'info') => {
+  await window.api.showMessageBox({
+    type,
+    title: type === 'error' ? t('app.error') : t('app.info'),
+    message,
+    buttons: ['OK']
+  })
+}
+
+const showConfirm = async (message) => {
+  const result = await window.api.showMessageBox({
+    type: 'question',
+    title: t('app.confirm'),
+    message,
+    buttons: [t('app.yes'), t('app.no')],
+    defaultId: 1,
+    cancelId: 1
+  })
+  return result.response === 0
+}
+
 const fileName = ref('')
 const rawText = ref('')
 const rows = ref([])
@@ -282,9 +304,9 @@ const loadPresets = () => {
   }
 }
 
-const savePreset = () => {
+const savePreset = async () => {
   if (!newPresetName.value.trim()) {
-    alert(t('errors.provideConfigName'))
+    await showAlert(t('errors.provideConfigName'), 'error')
     return
   }
 
@@ -314,10 +336,10 @@ const applyPreset = () => {
   }
 }
 
-const deletePreset = () => {
+const deletePreset = async () => {
   if (!selectedPresetId.value) return
 
-  if (confirm(t('confirm.deleteConfig'))) {
+  if (await showConfirm(t('confirm.deleteConfig'))) {
     presets.value = presets.value.filter((p) => p.id !== selectedPresetId.value)
     localStorage.setItem('columnMappingPresets', JSON.stringify(presets.value))
     selectedPresetId.value = ''
@@ -332,9 +354,12 @@ watch(selectedPresetId, () => {
 })
 
 // Convert and continue
-const continueToCategizer = () => {
+const continueToCategizer = async () => {
   if (!isValid.value) {
-    alert(t('errors.fillRequiredFields') + ':\n' + validationErrors.value.join('\n'))
+    await showAlert(
+      t('errors.fillRequiredFields') + ':\n' + validationErrors.value.join('\n'),
+      'error'
+    )
     return
   }
 
@@ -406,14 +431,17 @@ const continueToCategizer = () => {
     return
   }
 
-  // Navigate to Categorizer (normal flow)
-  router.push({
-    name: 'Categorizer',
-    state: {
+  // Store data in sessionStorage to avoid history.state cloning issues
+  sessionStorage.setItem(
+    'categorizerData',
+    JSON.stringify({
       projectData,
       fileName: fileName.value
-    }
-  })
+    })
+  )
+
+  // Navigate to Categorizer (normal flow)
+  router.push({ name: 'Categorizer' })
 }
 
 const goBack = () => {
